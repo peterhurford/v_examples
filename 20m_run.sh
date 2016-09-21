@@ -53,8 +53,7 @@ generate_recs_section() {
 date; for i in `seq 0 13`; do
   generate_recs_section $i &
 done
-# Wed Sep 21 15:29:49 UTC 2016
-#4h? -- this could be parallelized across multiple machines
+# Wed Sep 21 19:00:31 UTC 2016
 
 echo recs_*.dat | xargs cat > all_recs.dat
 rm recs_*.dat
