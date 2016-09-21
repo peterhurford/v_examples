@@ -7,7 +7,7 @@ vw -d ratings_t.dat -b 18 -q ui --rank 10 --l2 0.001 --learning_rate 0.015 --pas
 cat ratings_t.dat | parallel --pipe "awk '{print \$2, \$3, \$4, \$5}'" | cat > tmp_a #7s
 # Group: 1m43s
 
-awk 'FNR == NR { a[++n]=$0; next } { for(i=1; i<=n; i++) print $0, a[i] }' movies_t.dat users_t.dat > tmp_b #32m15s
+awk 'FNR == NR { a[++n]=$0; next } { for(i=1; i<=n; i++) print $0, a[i] }' movies_t.dat users_t.dat > tmp_b #32m15s -- this could be parallelized across multiple machines
 rm movielens.cache ratings.csv ratings_t.dat
 
 make_matrix() {
@@ -40,7 +40,6 @@ done
 #2h12m59s -- this could be parallelized across multiple machines
 
 generate_recs() {
-  local t=$(($2*20000))
   local user=$(($2+1))
   local line=`grep -m 1 -nF "|u $user " "predictions_t_$1.dat" | awk -F":" '{print $1}'`
   tail -n +$line "predictions_t_$1.dat" | head -n 27278 | grep "|u $user " | sort -nr | head > "recs_$2.dat"

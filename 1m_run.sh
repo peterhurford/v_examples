@@ -30,9 +30,8 @@ paste -d " " predictions.txt matrix_t.dat > predictions_t.dat
 
 # Get top 10 recommendations for each user (7m39s)
 generate_recs() {
-  local t=$(($1*3000))  # Approximate location of user to avoid slow greps.
   local user=$(($1+1))
-  local line=`grep -m 1 -nF "|u $user " predictions_t.dat | awk -F":" '{print $1}'`  # Get actual location of user.
+  local line=`grep -m 1 -nF "|u $user " predictions_t.dat | awk -F":" '{print $1}'`  # Get location of user.
   tail -n +$line predictions_t.dat | head -n 3882 | grep "|u $user " | sort -nr | head > "recs_$1.dat"  # Get all the ratings for the user, sort them, take top 10.
   echo "Finished recs for user $user/6039 on `date`"
 }
