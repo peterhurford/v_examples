@@ -88,7 +88,7 @@ date; for i in `seq 0 13`; do
   echo "Scheduling predict on matrix $i/13"
   predict_on_matrix $i &
 done
-# Wed Sep 21 03:13:45 UTC 2016
+#2h12m59s
 
 generate_recs() {
   local t=$(($2*20000))
@@ -97,11 +97,16 @@ generate_recs() {
   tail -n +$line "predictions_t_$1.dat" | head -n 27278 | grep "|u $user " | sort -nr | head > "recs_$2.dat"
   echo "Finished recs for user $user/138493 on `date`"
 }
-date; for i in `seq 0 13`; do
-  for j in `seq $(($i*10000)) (($i*10000+9999))`; do
-    generate_recs $i $j &
+generate_recs_section() {
+  for j in `seq $(($1*10000)) $(($1*10000+9999))`; do
+    generate_recs $1 $j
   done
+}
+date; for i in `seq 0 13`; do
+  generate_recs_section $i &
 done
+# Wed Sep 21 15:29:49 UTC 2016
+#2h?
 
 echo recs_*.dat | xargs cat > all_recs.dat
 rm recs_*.dat
