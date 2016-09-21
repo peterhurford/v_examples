@@ -1,6 +1,5 @@
 # install
-mkdir dev
-cd ~/dev
+mkdir dev; cd ~/dev
 sudo apt-get update
 sudo apt-get install build-essential
 sudo apt-get install clang-3.5 llvm
@@ -26,22 +25,27 @@ awk 'NR == FNR { list[$0]=1; next } { if (! list[$0]) print }' tmp_a tmp_b > mat
 # Group: 17s
 
 rm tmp_a tmp_b
-vw -d matrix_dat -i movielens.reg -t -p predictions.txt #1m58s
+vw -d matrix_t.dat -i movielens.reg -t -p predictions.txt #1m58s
 
 paste -d " " predictions.txt matrix_t.dat > predictions_t.dat #2s
 
 generate_recs() {
-  local t=$(($1*3883))
-  tail -n +$t predictions_t.dat | head -n 5000 | grep "|u $(($i+1)) " | sort -nr | head >> $2
-  date
-  echo "Finished user $(($1+1))/6040"
+  local t=$(($1*3000))
+  local user=$(($1+1))
+  local line=`grep -m 1 -nF "|u $user " predictions_t.dat | awk -F":" '{print $1}'`
+  tail -n +$line predictions_t.dat | head -n 3882 | grep "|u $user " | sort -nr | head > "recs_$1.dat"
+  echo "Finished recs for user $user/6039 on `date`"
 }
-date; for i in `seq 0 6039`; do generate_recs $i "recs.dat"
-done # 6040 users
-#11m50s
+date; for i in `seq 0 6039`; do generate_recs $i &
+done
+echo recs_*.dat | xargs cat > all_recs.dat
+rm recs_*.dat
+# 7m39s
 
-# TOTAL: 14m10s
-# $0.11 (0.25 hours @ $0.42 cents per hour) for EC2 and $0.01 ($0.003 per GB-day for 200GB for 0.01 day) for disk space. --> $0.12
+# 9m59s
+
+# TOTAL: 9m59s
+# $0.12 (0.17 hours @ $0.67 cents per hour) for EC2 and $0.01 ($0.003 per GB-day for 200GB for 0.01 day) for disk space. --> $0.13
 
 
 # 20M
@@ -52,13 +56,13 @@ tail -n +2 movies.csv | awk -F"," '{printf "|i %d\n", $1}' > movies_t.dat #0s
 awk '{print $3}' < ratings_t.dat | uniq | awk '{printf "|u %d\n", $1}' > users_t.dat #6s
 vw -d ratings_t.dat -b 18 -q ui --rank 10 --l2 0.001 --learning_rate 0.015 --passes 5 --decay_learning_rate 0.97 --power_t 0 -f movielens.reg --cache_file movielens.cache #1m43s
 cat ratings_t.dat | parallel --pipe "awk '{print \$2, \$3, \$4, \$5}'" | cat > tmp_a #7s
+# Group: 1m43s
 
-awk 'FNR == NR { a[++n]=$0; next } { for(i=1; i<=n; i++) print $0, a[i] }' movies_t.dat users_t.dat > tmp_b #30m17s
+awk 'FNR == NR { a[++n]=$0; next } { for(i=1; i<=n; i++) print $0, a[i] }' movies_t.dat users_t.dat > tmp_b #32m15s
 rm movielens.cache ratings.csv ratings_t.dat
-# Group: 30m17s
 
 make_matrix() {
-  local h=$((20000 * 27278))  # 10000 users per round with 27278 movies per user
+  local h=$((10000 * 27278))  # 10000 users per round with 27278 movies per user
   local t=$(($1*$h))
   echo "doing $1/13 - from $t to $(($t+$h))"
   local source_file="tmp_c_$1"
@@ -66,32 +70,41 @@ make_matrix() {
   tail -n +$t tmp_b | head -n $h > $source_file
   awk 'NR == FNR { list[$0]=1; next } { if (! list[$0]) print }' tmp_a $source_file > $matrix_file
   rm $source_file
-  date
-  echo "$1 complete"
+  echo "$1/13 complete on `date`"
 }
 date; for i in `seq 0 13`; do make_matrix $i &  # 14 rounds of 10000 will do all 138493 users. We do rounds to avoid using all the RAM.
 done
 rm tmp_*
-#5h24m37s / 14:34:45
+#1h30m13s
 # Expected count: 1,846,960,613
 
+predict_on_matrix() {
+  vw -d "matrix_t_$1.dat" -i movielens.reg -t -p "predictions_$1.txt"
+  paste -d " " "predictions_$1.txt" "matrix_t_$1.dat" > "predictions_t_$1.dat"
+  rm "predictions_$1.txt" "matrix_t_$1.dat"
+  echo "Finished predicting on matrix $1/13 on `date`"
+}
 date; for i in `seq 0 13`; do
-  vw -d "matrix_t_$i.dat" -i movielens.reg -t -p "predictions_$i.txt"
-  paste -d " " "predictions_$i.txt" "matrix_t_$i.dat" > "predictions_t_$i.dat"
-  rm "predictions_$i.dat"
-  rm "matrix_t_$i.dat"
-  date
-  echo "$1 complete"
+  echo "Scheduling predict on matrix $i/13"
+  predict_on_matrix $i &
 done
-#TBD / TBD
+# Wed Sep 21 03:13:45 UTC 2016
 
 generate_recs() {
-  local t=$(($1*27000))
-  echo "User $(($1+1))/138493"
-  tail -n +$t predictions_t.dat | head -n 50000 | grep "|u $(($i+1))" | sort -nr | head >> $2
+  local t=$(($2*20000))
+  local user=$(($2+1))
+  local line=`grep -m 1 -nF "|u $user " "predictions_t_$1.dat" | awk -F":" '{print $1}'`
+  tail -n +$line "predictions_t_$1.dat" | head -n 27278 | grep "|u $user " | sort -nr | head > "recs_$2.dat"
+  echo "Finished recs for user $user/138493 on `date`"
 }
-for i in `seq 0 138482`; do generate_recs recs_1.dat; date; done # 138483 users
-rm predictions_t.dat
-# TBD / TBD
+date; for i in `seq 0 13`; do
+  for j in `seq $(($i*10000)) (($i*10000+9999))`; do
+    generate_recs $i $j &
+  done
+done
+
+echo recs_*.dat | xargs cat > all_recs.dat
+rm recs_*.dat
+# TBD
 
 # $0.11 (0.25 hours @ $0.67 cents per hour) for EC2 and $0.01 ($0.003 per GB-day for 200GB for 0.01 day) for disk space. --> $0.12
