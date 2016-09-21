@@ -75,7 +75,7 @@ make_matrix() {
 date; for i in `seq 0 13`; do make_matrix $i &  # 14 rounds of 10000 will do all 138493 users. We do rounds to avoid using all the RAM.
 done
 rm tmp_*
-#1h30m13s
+#1h30m13s -- this could be parallelized across multiple machines
 # Expected count: 1,846,960,613
 
 predict_on_matrix() {
@@ -88,7 +88,7 @@ date; for i in `seq 0 13`; do
   echo "Scheduling predict on matrix $i/13"
   predict_on_matrix $i &
 done
-#2h12m59s
+#2h12m59s -- this could be parallelized across multiple machines
 
 generate_recs() {
   local t=$(($2*20000))
@@ -106,7 +106,7 @@ date; for i in `seq 0 13`; do
   generate_recs_section $i &
 done
 # Wed Sep 21 15:29:49 UTC 2016
-#2h?
+#4h? -- this could be parallelized across multiple machines
 
 echo recs_*.dat | xargs cat > all_recs.dat
 rm recs_*.dat
