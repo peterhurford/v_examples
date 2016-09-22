@@ -59,4 +59,4 @@ done
 echo recs_*.dat | xargs cat > all_recs.dat; rm recs_*.dat #0s
 
 # Total: 61m31s
-# $0.42 (1 hours @ $0.42 cents per hour) for EC2 and $0.24 ($0.003 per GB-day for 200GB for 0.04 day) for disk space. --> $0.66
+# $0.42 (1 hours @ $0.42 cents per hour) for EC2 (c3.2xlarge) and $0.24 ($0.003 per GB-day for 200GB for 0.04 day) for disk space. --> $0.66

@@ -43,4 +43,4 @@ echo recs_*.dat | xargs cat > all_recs.dat
 rm recs_*.dat
 
 # TOTAL: 12m7s
-# $0.14 (0.17 hours @ $0.67 cents per hour) for EC2
+# $0.14 (0.17 hours @ $0.67 cents per hour for a r3.2xlarge) for EC2
