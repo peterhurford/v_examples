@@ -88,12 +88,12 @@ generate_recs_section() {
 date; for i in `seq 0 7`; do
   generate_recs_section $i &
 done
-# Thu Sep 22 15:01:03 UTC 2016
-#15m10s
+#13m19s
 
 echo recs_*.dat | xargs cat > all_recs.dat
 rm recs_*.dat
 # 0s
 
-#41m11s
-# $2.32 (0.69 hours @ $0.84*4 cents per hour for 4x c3.4xlarge) for EC2 and $0.07 ($0.003 per GB-day for 4x200GB for 0.03 day) for disk space. --> $2.39
+
+#25m0s
+# $1.41 (0.42 hours @ $0.84*4 cents per hour for 4x c3.4xlarge) for EC2 and $0.06 ($0.003 per GB-day for 4x200GB for 0.017 day) for disk space. --> $1.47
