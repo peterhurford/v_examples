@@ -6,7 +6,6 @@ sudo ln -s /usr/bin/clang-3.5 /usr/bin/clang; sudo ln -s /usr/bin/clang++-3.5 /u
 sudo apt-get install libboost-all-dev
 sudo apt-get install git
 sudo apt-get install unzip htop parallel
-git clone https://github.com/JohnLangford/vowpal_wabbit.git; cd vowpal_wabbit; make; sudo make install
-cd ..
+git clone https://github.com/JohnLangford/vowpal_wabbit.git; cd vowpal_wabbit; make; sudo make install; cd ..
 
 # Also be sure to scp up the zip file
