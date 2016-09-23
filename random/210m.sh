@@ -7,7 +7,7 @@ seq -f "%.0f" 1 210000000 > customers.dat
 # Randomly sample products and paste them with customers
 # to get shuf (called gshuf) on mac, `brew install coreutils`. On Mac, `shuf` is called `gshuf`.
 random_recs() {
-  gshuf -r -n 26250000 products.dat > "tmp_p_$1"
+  shuf -r -n 26250000 products.dat > "tmp_p_$1"
   tail -n +$(($1*26250000)) customers.dat | head -n 26250000 > "tmp_c_$1"
   paste -d " " "tmp_c_$1" "tmp_p_$1" > "recs_$1.dat"
   rm "tmp_c_$1" "tmp_p_$1"
