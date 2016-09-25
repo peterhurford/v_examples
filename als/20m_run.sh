@@ -32,7 +32,7 @@ make_matrix() {
   rm $source_file
   echo "$1/15 complete on `date`"
 }
-date; for i in `seq 0 15`; do make_matrix $i &  # 16 rounds of 2164 will do all 34624 users per machine. We do rounds to avoid using all the RAM.
+date; for i in `seq 0 15`; do make_matrix $i  # 16 rounds of 2164 will do all 34624 users per machine. We do rounds to avoid using all the RAM.
 done
 #20m34s
 
