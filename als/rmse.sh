@@ -23,13 +23,40 @@ paste -d " " predictions.txt matrix_t.dat > predictions_t.dat
 
 # Also manually calculate RMSE
 awk '{print ($1-$2) ** 2}' predictions_t.dat | awk '{ SUM += $1} END { print SUM }' | awk '{print sqrt($1/20042)}'
-# 1.01629
+# RMSE 1.01629
 
+# ----
 
 # Train a VW ALS model on the train data (try more passes)
+rm movielens* predictions*
 vw -d train.dat -b 18 -q ui --rank 10 --l2 0.001 --learning_rate 0.015 --passes 100 --decay_learning_rate 0.97 --power_t 0 -f movielens.reg --cache_file movielens.cache
-# Fri Sep 23 16:06:37 CDT 2016
+# 54s
 
 # Test
 vw test.dat -i movielens.reg -t -p predictions.txt
-# Average Loss: 0.990613 (RMSE 0.995)
+# 1s, Average Loss: 0.990613 (RMSE 0.995)
+
+# ----
+
+# Train a VW ALS model on the train data (try other features)
+rm movielens* predictions*
+vw -d train.dat -b 24 --passes 100 -k --l2 1.25e-7 --lrq ui7 -f movielens.reg --cache_file movielens.cache
+# 6s
+
+# Test
+vw test.dat -i movielens.reg -t -p predictions.txt
+# 0s, Average Loss: 0.986698 (RMSE .993)
+# ----
+
+# Train a VW ALS model on the train data (try other features)
+rm movielens* predictions*
+vw -d train.dat -b 24 --passes 100 --l2 1.25e-6 --lrq ui14 --lrqdropout --power_t 0.5 -f movielens.reg --cache_file movielens.cache; vw test.dat -i movielens.reg -t -p predictions.txt
+# 6s
+
+# Test
+vw test.dat -i movielens.reg -t -p predictions.txt
+# 0s, Average Loss: 0.984641 (RMSE .992)
+
+# ---
+# Attempt to grid search (doesn't always produce the best results)
+~/dev/vowpal_wabbit/utl/vw-hypersearch -L -t test.dat 1e-9 1e-4 vw -d train.dat -b 24 --passes 100 --l2 % --lrq ui14 --lrqdropout --power_t 0.5 -f movielens.reg --cache_file movielens.cache
