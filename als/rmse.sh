@@ -49,13 +49,9 @@ vw test.dat -i movielens.reg -t -p predictions.txt
 # ----
 
 # Train a VW ALS model on the train data (try other features)
-rm movielens* predictions*
-vw -d train.dat -b 24 --passes 100 --l2 1.25e-6 --lrq ui14 --lrqdropout --power_t 0.5 -f movielens.reg --cache_file movielens.cache; vw test.dat -i movielens.reg -t -p predictions.txt
-# 6s
-
-# Test
-vw test.dat -i movielens.reg -t -p predictions.txt
-# 0s, Average Loss: 0.984641 (RMSE .992)
+rm movielens* predictions*; gshuf train.dat > train_s.dat
+vw -d train_s.dat -b 24 --passes 100 --l2 1.25e-6 --lrq ui14 --lrqdropout --boosting 10 --power_t 0.5 --decay_learning_rate=.95 --learning_rate=10 -f movielens.reg --cache_file movielens.cache; vw test.dat -i movielens.reg -t -p predictions.txt
+# 7s for train + test, Average Loss: 0.946612 (RMSE .973)
 
 # ---
 # Attempt to grid search (doesn't always produce the best results)
