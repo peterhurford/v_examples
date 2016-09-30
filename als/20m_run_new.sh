@@ -45,7 +45,7 @@ split -dl 5000066 tmp_a tmp_a  # 20000263 ratings / 4 splits (TODO: See if we ca
 # Get top 10 recommendations for each user (7m39s?)
 generate_recs() {
   # Split prediction file by user (27278 predictions per user)
-  split -dl 27278 "predictions_$1_$2.dat" "recs_$1_$2_"
+  split -dl 27278 "predictions_$1_$2.dat" "recs_$1_$2_"   # TODO: This does not actually put only one user per file.
   for i in `seq 0 1704`; do # (users x movies / 16) / users - 1
     if [ $i -ge 9900 ]
       then i=$(($i-9900+990000))
@@ -55,7 +55,7 @@ generate_recs() {
       then i="0$i"
     fi
     rm "predictions_$1_$2.dat"
-    sort -nr "recs_$1_$2_$i" | head -n 500 | awk '{printf "%s %d %s %d\n", $2, $3, $4, $5}' | comm -2 -3 - "tmp_a$1" | head > "recs_t_$1_$2_$i"
+    sort -nr "recs_$1_$2_$i" | head -n 500 | awk '{printf "%s %d %s %d\n", $2, $3, $4, $5}' | comm -2 -3 - "tmp_a0$1" | head > "recs_t_$1_$2_$i"
     echo "Finished grid $1 x $2, user $i on `date`"
   done
 }
@@ -64,7 +64,6 @@ date; for i in `seq 0 3`; do
     generate_recs $i $j &
   done
 done
-# Fri Sep 30 21:03:32 UTC 2016
 
 echo recs_t_* | xargs cat > all_recs.dat # 4s
 rm recs* #1s
