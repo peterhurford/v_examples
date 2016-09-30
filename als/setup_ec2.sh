@@ -1,4 +1,3 @@
-mkdir dev; cd ~/dev
 sudo apt-get update
 sudo apt-get install build-essential
 sudo apt-get install clang-3.5 llvm
