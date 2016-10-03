@@ -1,20 +1,21 @@
-# Convert ratings from movielens format to VW format (3s)
+# Convert ratings from movielens format to VW format (?s)
 tail -n +2 ratings.csv | awk -F"," '{printf "%f |u %d |i %d\n", $3, $1, $2}' > ratings_t.dat
 
-# Convert movie data from movielens format to VW format (0s)
+# Convert movie data from movielens format to VW format (?s)
 tail -n +2 movies.csv | awk -F"," '{printf "|i %d\n", $1}' > movies_t.dat
 
-# Create a user dataset for VW from the unique customer ids in the ratings dataset (0s)
+# Create a user dataset for VW from the unique customer ids in the ratings dataset (?s)
 awk '{print $3}' < ratings_t.dat | uniq | awk '{printf "|u %d\n", $1}' > users_t.dat
 
-# Train a VW ALS model on the data (30s)
+# Train a VW ALS model on the data (?s)
 vw -d ratings_t.dat -b 18 -q ui --rank 10 --l2 0.001 --learning_rate 0.015 --passes 5 --decay_learning_rate 0.97 --power_t 0 -f movielens.reg --cache_file movielens.cache
 
-# Create splits for generating grids (0s)
+# Create splits for generating grids (?s)
 gsplit -d -l 34624 users_t.dat users  # 138493 users into 4 splits
 gsplit -d -l 6820 movies_t.dat movies   # 27278 movies into 4 splits
 gsplit -d -l 1250017 ratings_t.dat ratings # 20000263 ratings into 16 splits
 
+# Generate predictions (?s)
 generate_matrix() {
   mult=$(( $1 * $2 ))
   if [ $mult -lt 10 ]; then r="0$mult"; else r="$mult"; fi
@@ -30,8 +31,8 @@ date; for i in `seq 0 3`; do
     generate_matrix $i $j &
   done
 done
-# 1m23s
 
+# Turn predictions into top 10 recs per user (12s)
 generate_recs() {
   sort -nr -k3 -k1 "predictions_$1_$2.dat" | awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<10; i++) { print; getline } } }' > "recs_$1_$2.dat"
   echo "Finished recs $1 x $2 on `date`"
@@ -41,10 +42,9 @@ date; for i in `seq 0 3`; do
     generate_recs $i $j &
   done
 done
-# 12s
+cat recs* > all_recs_s.dat
+awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<8; i++) { print; getline }; print; getline; print } }' all_recs_s.dat > all_recs.dat
 
-cat recs* > all_recs_s.dat # 0s
-awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<8; i++) { print; getline }; print; getline; print } }' all_recs_s.dat > all_recs.dat #0s
 wc -l all_recs.dat
 
 # TOTAL: 2m8s
