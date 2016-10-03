@@ -1,8 +1,8 @@
 # Convert ratings from movielens format to VW format (3s)
-awk -F"::" '{printf "%d |u %d |i %d\n", $3, $1, $2}' < ratings.dat > ratings_t.dat
+tail -n +2 ratings.csv | awk -F"," '{printf "%f |u %d |i %d\n", $3, $1, $2}' > ratings_t.dat
 
 # Convert movie data from movielens format to VW format (0s)
-awk -F"::" '{printf "|i %d\n", $1}' < movies.dat > movies_t.dat
+tail -n +2 movies.csv | awk -F"," '{printf "|i %d\n", $1}' > movies_t.dat
 
 # Create a user dataset for VW from the unique customer ids in the ratings dataset (0s)
 awk '{print $3}' < ratings_t.dat | uniq | awk '{printf "|u %d\n", $1}' > users_t.dat
@@ -11,9 +11,9 @@ awk '{print $3}' < ratings_t.dat | uniq | awk '{printf "|u %d\n", $1}' > users_t
 vw -d ratings_t.dat -b 18 -q ui --rank 10 --l2 0.001 --learning_rate 0.015 --passes 5 --decay_learning_rate 0.97 --power_t 0 -f movielens.reg --cache_file movielens.cache
 
 # Create splits for generating grids (0s)
-gsplit -d -l 1510 users_t.dat users  # 6040 users into 4 splits
-gsplit -d -l 971 movies_t.dat movies   # 3883 movies into 4 splits
-gsplit -d -l 62514 ratings_t.dat ratings # 1000209 ratings into 16 splits
+gsplit -d -l 34624 users_t.dat users  # 138493 users into 4 splits
+gsplit -d -l 6820 movies_t.dat movies   # 27278 movies into 4 splits
+gsplit -d -l 1250017 ratings_t.dat ratings # 20000263 ratings into 16 splits
 
 generate_matrix() {
   mult=$(( $1 * $2 ))
@@ -33,10 +33,13 @@ done
 # 1m23s
 
 generate_recs() {
-  sort -nr -k3 -k1 "predictions_$1.dat" | awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<10; i++) { print; getline } } }' > "recs_$1.dat"
-  echo "Finished recs $1 on `date`"
+  sort -nr -k3 -k1 "predictions_$1_$2.dat" | awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<10; i++) { print; getline } } }' > "recs_$1_$2.dat"
+  echo "Finished recs $1 x $2 on `date`"
 }
-date; for i in `seq 0 7`; do generate_recs $i &
+date; for i in `seq 0 3`; do
+  for j in `seq 0 3`; do
+    generate_recs $i $j &
+  done
 done
 # 12s
 

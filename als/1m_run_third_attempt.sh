@@ -23,7 +23,7 @@ generate_matrix() {
   awk 'NR == FNR { list[$0]=1; next } { if (! list[$0]) print }' "tmp_a_$1_$2" "tmp_b_$1_$2" > "matrix_t_$1_$2"
   vw -d "matrix_t_$1_$2" -i movielens.reg -t -p "predictions_$1_$2.txt"
   paste -d " " "predictions_$1_$2.txt" "matrix_t_$1_$2" > "predictions_$1_$2.dat"
-  echo "Finished matrix $1 on `date`"
+  echo "Finished matrix $1 x $2 on `date`"
 }
 date; for i in `seq 0 3`; do
   for j in `seq 0 3`; do
@@ -33,16 +33,19 @@ done
 # 1m23s
 
 generate_recs() {
-  sort -nr -k3 -k1 "predictions_$1.dat" | awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<10; i++) { print; getline } } }' > "recs_$1.dat"
-  echo "Finished recs $1 on `date`"
+  sort -nr -k3 -k1 "predictions_$1_$2.dat" | awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<10; i++) { print; getline } } }' > "recs_$1_$2.dat"
+  echo "Finished recs $1 x $2 on `date`"
 }
-date; for i in `seq 0 7`; do generate_recs $i &
+date; for i in `seq 0 3`; do
+  for j in `seq 0 3`; do
+    generate_recs $i $j &
+  done
 done
-# 12s
+# 13s
 
 cat recs* > all_recs_s.dat # 0s
 awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<8; i++) { print; getline }; print; getline; print } }' all_recs_s.dat > all_recs.dat #0s
 wc -l all_recs.dat
 
-# TOTAL: 2m8s
+# TOTAL: 2m9s
 # Done on my laptop (16G RAM 8 core Macbook Pro Mid-2015), so no cost data.
