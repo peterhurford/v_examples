@@ -15,7 +15,7 @@ head -n 80167 ratings_t.dat | gshuf > train.dat
 tail -n 20042 ratings_t.dat > test.dat
 head -n 80167 ratings_tt.dat | gshuf > train_d.dat
 tail -n 20042 ratings_tt.dat > test_d.dat
-sed "s/|g //" train_d.dat > train_d2.dat  # Include gender as part of the item matrix.
+sed "s/|g //" train_d.dat > train_d2.dat  # Include gender as part of the item matrix, see http://www.eumssi.eu/wp-content/uploads/2013/11/PID3064447.pdf
 sed "s/|g //" test_d.dat > test_d2.dat
 
 # Train a VW ALS model on the train data

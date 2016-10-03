@@ -1,36 +1,55 @@
-# Convert ratings from movielens format to VW format (?s)
+# Convert ratings from movielens format to VW format (54s)
 tail -n +2 ratings.csv | awk -F"," '{printf "%f |u %d |i %d\n", $3, $1, $2}' > ratings_t.dat
 
-# Convert movie data from movielens format to VW format (?s)
+# Convert movie data from movielens format to VW format (0s)
 tail -n +2 movies.csv | awk -F"," '{printf "|i %d\n", $1}' > movies_t.dat
 
-# Create a user dataset for VW from the unique customer ids in the ratings dataset (?s)
+# Create a user dataset for VW from the unique customer ids in the ratings dataset (5s)
 awk '{print $3}' < ratings_t.dat | uniq | awk '{printf "|u %d\n", $1}' > users_t.dat
 
-# Train a VW ALS model on the data (?s)
+# Train a VW ALS model on the data (1m31s)
 vw -d ratings_t.dat -b 18 -q ui --rank 10 --l2 0.001 --learning_rate 0.015 --passes 5 --decay_learning_rate 0.97 --power_t 0 -f movielens.reg --cache_file movielens.cache
 
-# Create splits for generating grids (?s)
-gsplit -d -l 34624 users_t.dat users  # 138493 users into 4 splits
-gsplit -d -l 6820 movies_t.dat movies   # 27278 movies into 4 splits
-gsplit -d -l 1250017 ratings_t.dat ratings # 20000263 ratings into 16 splits
+# Create splits for generating grids (5s)
+split -d -l 34624 users_t.dat users  # 138493 users into 4 splits
+split -d -l 6820 movies_t.dat movies   # 27278 movies into 4 splits
+split -d -l 5000066 ratings_t.dat ratings # 20000263 ratings into 4 splits
 
-# Generate predictions (?s)
 generate_matrix() {
-  mult=$(( $1 * $2 ))
-  if [ $mult -lt 10 ]; then r="0$mult"; else r="$mult"; fi
-  awk '{printf "%s %d %s %d\n", $2, $3, $4, $5}' < "ratings$r" > "tmp_a_$1_$2"
+  awk '{printf "%s %d %s %d\n", $2, $3, $4, $5}' < "ratings0$2" > "tmp_a_$2"
   awk 'FNR == NR { a[++n]=$0; next } { for(i=1; i<=n; i++) print $0, a[i] }' "movies0$1" "users0$2" > "tmp_b_$1_$2"
-  awk 'NR == FNR { list[$0]=1; next } { if (! list[$0]) print }' "tmp_a_$1_$2" "tmp_b_$1_$2" > "matrix_t_$1_$2"
-  vw -d "matrix_t_$1_$2" -i movielens.reg -t -p "predictions_$1_$2.txt"
-  paste -d " " "predictions_$1_$2.txt" "matrix_t_$1_$2" > "predictions_$1_$2.dat"
-  echo "Finished matrix $1 on `date`"
+  echo "Finished matrix $1 x $2 on `date`"
 }
 date; for i in `seq 0 3`; do
   for j in `seq 0 3`; do
     generate_matrix $i $j &
   done
 done
+# 6m41s
+
+trim_matrix() {
+  awk 'NR == FNR { list[$0]=1; next } { if (! list[$0]) print }' "tmp_a_$2" "tmp_b_$1_$2" > "matrix_t_$1_$2"
+  echo "Finished matrix $1 x $2 on `date`"
+}
+date; for i in `seq 0 3`; do
+  for j in `seq 0 3`; do
+    trim_matrix $i $j  # Parallelizing this seems to run into RAM problems?
+  done
+done
+# 59m51s
+
+predict_matrix() {
+  vw -d "matrix_t_$1_$2" -i movielens.reg -t -p "predictions_$1_$2.txt"
+  paste -d " " "predictions_$1_$2.txt" "matrix_t_$1_$2" > "predictions_$1_$2.dat"
+  echo "Finished matrix $1 x $2 on `date`"
+}
+date; for i in `seq 0 3`; do
+  for j in `seq 0 3`; do
+    predict_matrix $i $j &
+  done
+done
+# 1h36m36s
+# 48m42s
 
 # Turn predictions into top 10 recs per user (12s)
 generate_recs() {
@@ -39,13 +58,14 @@ generate_recs() {
 }
 date; for i in `seq 0 3`; do
   for j in `seq 0 3`; do
-    generate_recs $i $j &
+    generate_recs $i $j   # Parallelizing this seems to run into RAM problems?
   done
 done
-cat recs* > all_recs_s.dat
-awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<8; i++) { print; getline }; print; getline; print } }' all_recs_s.dat > all_recs.dat
+# 48m42s
 
+cat recs* > all_recs_s.dat #1s;w
+sort -nr -k3 -k1 all_recs_s.dat | awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<8; i++) { print; getline }; print; getline; print } }' > all_recs.dat #2s
 wc -l all_recs.dat
 
-# TOTAL: 2m8s
-# Done on my laptop (16G RAM 8 core Macbook Pro Mid-2015), so no cost data.
+# TOTAL: 3h34m27s
+# Done on c3.4xlarge (30G RAM 16 core)
