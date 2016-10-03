@@ -63,7 +63,7 @@ date; for i in `seq 0 3`; do
 done
 # 48m42s
 
-cat recs* > all_recs_s.dat #1s;w
+cat recs* > all_recs_s.dat #1s
 sort -nr -k3 -k1 all_recs_s.dat | awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<8; i++) { print; getline }; print; getline; print } }' > all_recs.dat #2s
 wc -l all_recs.dat
 
