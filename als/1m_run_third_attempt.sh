@@ -16,13 +16,12 @@ awk 'FNR == NR { a[++n]=$0; next } { for(i=1; i<=n; i++) print $0, a[i] }' movie
 # Remove the rating to get raw user-product combinations present in the ratings (2s)
 awk '{printf "%s %d %s %d\n", $2, $3, $4, $5}' < ratings_t.dat > tmp_a
 
-# Filter out the existing user-product combinations to only predict on novel combinations (40s)
-awk 'NR == FNR { list[$0]=1; next } { if (! list[$0]) print }' tmp_a tmp_b > matrix_t.dat
-
-# Split grid into eight sub-grids (0s)
-gsplit -d --number 8 matrix_t.dat matrix_t_
+# Split grid into eight sub-grids (1s)
+gsplit -d --number 8 tmp_b tmp_b
+gsplit -d --number 8 tmp_a tmp_a
 
 generate_matrix() {
+  awk 'NR == FNR { list[$0]=1; next } { if (! list[$0]) print }' "tmp_a0$1" "tmp_b0$1" > "matrix_t_0$1"
   vw -d "matrix_t_0$1" -i movielens.reg -t -p "predictions$1.txt"         # Predict
   paste -d " " "predictions$1.txt" "matrix_t_0$1" > "predictions_$1.dat"  # Add labels
   rm "matrix_t_0$1" "predictions$1.txt"                                   # Remove files
@@ -30,7 +29,7 @@ generate_matrix() {
 }
 date; for i in `seq 0 7`; do generate_matrix $i &
 done
-# 1m2s
+# 1m11s
 
 generate_recs() {
   sort -nr -k3 -k1 "predictions_$1.dat" | awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<10; i++) { print; getline } } }' > "recs_$1.dat"
@@ -40,8 +39,9 @@ date; for i in `seq 0 7`; do generate_recs $i &
 done
 # 12s
 
-cat recs* > all_recs.dat # 0s
+cat recs* > all_recs_s.dat # 0s
+awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<8; i++) { print; getline }; print; getline; print } }' all_recs_s.dat > all_recs.dat #0s
 wc -l all_recs.dat
 
-# TOTAL: 2m47s
+# TOTAL: 2m17s
 # Done on my laptop (16G RAM 8 core Macbook Pro Mid-2015), so no cost data.
