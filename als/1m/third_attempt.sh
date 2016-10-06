@@ -50,5 +50,7 @@ awk '{ if(!($3 in seen)) { seen[$3] = 1; for (i=0; i<8; i++) { print; getline };
 
 wc -l all_recs.dat
 
-# TOTAL: 2m9s
-# Done on my laptop (16G RAM 8 core Macbook Pro Mid-2015), so no cost data.
+# TOTAL: 2m9s on my laptop (16G RAM 8 core Macbook Pro Mid-2015).
+
+# Bonus -- convert user-product row format to user-products<list> format (0s)
+awk '{ if(!($3 in seen)) { seen[$3] = 1; printf "[%d, [", $3; for (i=0; i<9; i++) { printf "%d, ", $5; getline }; printf "%d]]\n", $5 } }' all_recs.dat > rec_list.dat
