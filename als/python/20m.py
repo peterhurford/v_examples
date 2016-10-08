@@ -2,14 +2,16 @@
 
 from vowpal_porpoise import VW
 from datetime import datetime
+import os
 
 start = datetime.now()
 vw = VW(moniker='ALS', passes=10, quadratic='ui', rank=10, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
-ratings = open('ratings.dat', 'r')
-movie_file = open('movies.dat', 'r')
+ratings = open('ratings.csv', 'r')
+movie_file = open('movies.csv', 'r')
+os.system("tail -n +2 ratings.csv | awk -F\",\" '{print $1}' | uniq > users.dat")
 user_file = open('users.dat', 'r')
-movie_ids = [movie.split('::')[0] for movie in list(movie_file.read().splitlines())]
-user_ids = [user.split('::')[0] for user in list(user_file.read().splitlines())]
+movie_ids = [movie.split(',')[0] for movie in list(movie_file.read().splitlines())]
+user_ids = [user.split(',')[0] for user in list(user_file.read().splitlines())]
 movie_file.close()
 user_file.close()
 rec_file = open('py_recs.dat', 'w')
@@ -17,9 +19,10 @@ setup_done = datetime.now()
 
 print "Jamming some train..."
 with vw.training():
-    for r in xrange(1000209):  # Read in ratings
+    line = ratings.readline()  # Throw out header
+    for r in xrange(20000263):  # Read in ratings
         line = ratings.readline()
-        item = line.split('::')
+        item = line.split(',')
         vw_item = item[2] + ' |u ' + item[0]  + ' |i ' + item[1]
         vw.push_instance(vw_item)
 training_done = datetime.now()
@@ -35,10 +38,12 @@ with vw.predicting():
 predicting_done = datetime.now()
 
 print "Generating recs..."
-predictions = list(vw.read_predictions_())
+predictions = list(vw.read_predictions_()) # TODO: This will have to be read line by line.
 for u, user_id in enumerate(user_ids):
     user_recs = []
-    user_preds = predictions[u * 3883 : (u + 1) * 3883]
+    user_preds = predictions[u * 27278 : (u + 1) * 27278]
+    if u % 100 == 0:
+        print u
     for m, pred in enumerate(user_preds):
         user_recs.append([pred, movie_ids[m]])
     user_recs.sort(reverse=True)
@@ -54,7 +59,7 @@ print "Predicting in " + str(predicting_done - training_done)
 print "Reccing in " + str(recs_done - predicting_done)
 print "Total: " + str(recs_done - start)
 
-# TOTAL: 5m26s on my laptop (16G RAM 8 core Macbook Pro Mid-2015).
+# TOTAL: ?
 
 # TODO: Filter out the already rated
 # TODO: Multithread predict
