@@ -5,7 +5,7 @@ from datetime import datetime
 import os
 
 start = datetime.now()
-vw = VW(moniker='ALS', passes=10, quadratic='ui', rank=10, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
+vw = VW(moniker='ALS', passes=5, quadratic='ui', rank=10, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
 ratings = open('ratings.csv', 'r')
 movie_file = open('movies.csv', 'r')
 os.system("tail -n +2 ratings.csv | awk -F\",\" '{print $1}' | uniq > users.dat")
@@ -58,8 +58,6 @@ print "Training in " + str(training_done - setup_done)
 print "Predicting in " + str(predicting_done - training_done)
 print "Reccing in " + str(recs_done - predicting_done)
 print "Total: " + str(recs_done - start)
-
-# TOTAL: ?
 
 # TODO: Filter out the already rated
 # TODO: Multithread predict
