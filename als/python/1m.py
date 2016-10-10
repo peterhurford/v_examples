@@ -43,7 +43,7 @@ with vw.training():
 training_done = datetime.now()
 
 print "Spooling predictions..."
-cores = 8
+cores = 16
 vw_test = [copy(vw) for _ in range(cores)]
 for vw_instance in vw_test:
     vw_instance.start_predicting()
@@ -105,10 +105,10 @@ print "Predicting in " + str(predicting_done - training_done)
 print "Reccing in " + str(recs_done - predicting_done)
 print "Total: " + str(recs_done - start)
 
-# Set up in 0:00:01.195302
-# Training in 0:01:09.397174
-# Predicting in 0:01:17.869613
-# Reccing in 0:00:20.515618
-# Total: 0:02:48.977707
+# Set up in 0:00:01.161578
+# Training in 0:00:09.435150
+# Predicting in 0:01:16.266586
+# Reccing in 0:00:06.507748
+# Total: 0:01:33.371062
 
-# ...on my laptop (16G RAM 8 core Macbook Pro Mid-2015).
+# ...on c3.4xlarge (30G RAM 16 core)
