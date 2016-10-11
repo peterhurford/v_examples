@@ -17,6 +17,8 @@ os.system("tail -n +2 ratings.csv | awk -F\",\" '{print $1}' | uniq > users.csv"
 user_file = open('users.csv', 'r')
 movie_ids = [movie.split(',')[0] for movie in list(movie_file.read().splitlines())]
 user_ids = [user.split(',')[0] for user in list(user_file.read().splitlines())]
+movie_ids.pop(0) # Throw out headers
+user_ids.pop(0)
 
 ratings = {}
 while True:
