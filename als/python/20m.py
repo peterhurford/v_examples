@@ -110,5 +110,9 @@ print "Predicting in " + str(predicting_done - training_done)
 print "Reccing in " + str(recs_done - predicting_done)
 print "Total: " + str(recs_done - start)
 
-# Time ?
+# Set up in 0:00:30.890973
+# Training in 0:02:03.457164
+# Predicting in 5:13:08.389028
+# Reccing in 0:24:46.010530
+# Total: 5:40:28.747695
 # ...on c3.4xlarge (30G RAM 16 core)
