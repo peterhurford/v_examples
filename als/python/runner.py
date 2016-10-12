@@ -5,16 +5,24 @@ from datetime import datetime
 from copy import copy
 from multiprocessing import Pool
 import os
+import argparse
 
 start = datetime.now()
-vw = VW(moniker='ALS', passes=5, quadratic='ui', rank=10, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
 
 print "Setting up..."
-os.system("head -n 5000001 ratings.csv > ratings_.csv; rm ratings.csv; mv ratings_.csv ratings.csv")
-ratings_file = open('ratings.csv', 'r')
+parser = argparse.ArgumentParser()
+parser.add_argument('--cores')
+parser.add_argument('--rating_count')
+cores = int(parser.parse_args().cores)
+rating_count = int(parser.parse_args().rating_count)
+vw = VW(moniker='ALS', passes=5, quadratic='ui', rank=10, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
+
+os.system("head -n {} ratings.csv > ratings_.csv".format(rating_count + 1)) # +1 to not trim header
+os.system("tail -n +2 ratings_.csv | awk -F\",\" '{print $1}' | uniq > users.csv")
+
+ratings_file = open('ratings_.csv', 'r')
 ratings_file.readline() # Throw out header
 movie_file = open('movies.csv', 'r')
-os.system("tail -n +2 ratings.csv | awk -F\",\" '{print $1}' | uniq > users.csv")
 user_file = open('users.csv', 'r')
 movie_ids = [movie.split(',')[0] for movie in list(movie_file.read().splitlines())]
 user_ids = [user.split(',')[0] for user in list(user_file.read().splitlines())]
@@ -49,21 +57,27 @@ with vw.training():
 training_done = datetime.now()
 
 print "Spooling predictions..."
-cores = 16
 vw_test = [copy(vw) for _ in range(cores)]
-for vw_instance in vw_test:
+
+def predict_on_core(core):
+    vw_instance = vw_test[core]
+    user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
     vw_instance.start_predicting()
-for u, user_id in enumerate(user_ids):
-    for movie_id in movie_ids:
-        if ratings[user_id].get(movie_id) is None:
-            vw_item = "'" + user_id + "x" + movie_id + " |u " + user_id + "|i " + movie_id
-            vw_test[u % cores].push_instance(vw_item)
-for vw_instance in vw_test:
-    vw_instance.close_process()
+    for user_id in user_id_pool:
+        for movie_id in movie_ids:
+            if ratings[user_id].get(movie_id) is None:
+                vw_item = "'" + user_id + "x" + movie_id + " |u " + user_id + "|i " + movie_id
+                vw_instance.push_instance(vw_item)
+    return vw_instance.prediction_file
+
+pool = Pool(cores)
+prediction_files = pool.map(predict_on_core, range(cores))
+# for vw_instance in vw_test:
+#     vw_instance.close_process()
 predicting_done = datetime.now()
 
 print "Generating recs..."
-prediction_files = [open(vw_instance.prediction_file, 'r') for vw_instance in vw_test]
+prediction_files = [open(f) for f in prediction_files] # [vw_instance.prediction_file, 'r') for vw_instance in vw_test]
 rec_files = [open('py_recs' + str(i) + '.dat', 'w') for i in range(cores)]
 
 def write_recs(user_id, user_recs, rec_file):
@@ -71,9 +85,9 @@ def write_recs(user_id, user_recs, rec_file):
     rec_file.write(str({'user': user_id,
                         'products': map(lambda x: x[1], user_recs[:10])}) + '\n')
 
-def rec_for_user(pool):
-    pfile = prediction_files[pool]
-    rfile = rec_files[pool]
+def rec_for_user(core):
+    pfile = prediction_files[core]
+    rfile = rec_files[core]
     current_user_id = None
     user_recs = []
     while True:
@@ -94,7 +108,6 @@ def rec_for_user(pool):
             current_user_id = user_id
             user_recs = []
         user_recs.append([pred, movie_id])
-
 pool = Pool(cores)
 pool.map(rec_for_user, range(cores))
 
@@ -111,9 +124,28 @@ print "Predicting in " + str(predicting_done - training_done)
 print "Reccing in " + str(recs_done - predicting_done)
 print "Total: " + str(recs_done - start)
 
-# Set up in 0:00:07.961124
-# Training in 0:00:34.035532
-# Predicting in 1:16:15.856862
-# Reccing in 0:06:03.714512
-# Total: 1:23:01.568030
+# 1M
+# Set up in 0:00:01.589956
+# Training in 0:00:09.532032
+# Predicting in 0:04:28.629261
+# Reccing in 0:01:03.216326
+# Total: 0:05:42.967575
+# TODO: Rec accuracy
+
+# 2M
+# ?
+
+# 5M
+# Set up in 0:00:07.977441
+# Training in 0:00:32.729757
+# Predicting in 0:22:29.189496
+# Reccing in 0:05:46.371634
+# Total: 0:28:56.268328
+
+# 10M
+# ?
+
+# 20M
+# ?
+
 # ...on c3.4xlarge (30G RAM 16 core)
