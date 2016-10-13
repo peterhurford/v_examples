@@ -1,3 +1,5 @@
+# Example usage: rm -r recs; spark-submit --master local[*] --driver-memory 6G --num-executors 9 --executor-memory 5G --executor-cores 3 --packages com.databricks:spark-csv_2.11:1.5.0 runner.py --partisions 81 --num_ratings 20000000
+
 import logging
 import argparse
 import math
@@ -11,11 +13,11 @@ from pyspark.ml.evaluation import RegressionEvaluator
 
 start = datetime.now()
 parser = argparse.ArgumentParser()
-parser.add_argument('--cores')
+parser.add_argument('--partitions')
 parser.add_argument('--num_ratings')
 parser.add_argument('--evaluate')
 parser.add_argument('--evaluate_only')
-cores = int(parser.parse_args().cores)
+partitions = int(parser.parse_args().partitions)
 num_ratings = int(parser.parse_args().num_ratings)
 evaluate = parser.parse_args().evaluate is not None
 evaluate_only = parser.parse_args().evaluate_only is not None
@@ -26,8 +28,8 @@ sc = SparkContext(appName="VWProtoTestSpark")
 sc.setLogLevel("ERROR")
 sql_context = SQLContext(sc)
 
-logging.info("Setting up...")
-sql_context.setConf("spark.sql.shuffle.partitions", str(cores * 3))
+print("Setting up, formatting for {} partitions...".format(partitions))
+sql_context.setConf("spark.sql.shuffle.partitions", str(partitions))
 
 ratings = (sql_context.read
            .format('com.databricks.spark.csv')
@@ -35,18 +37,20 @@ ratings = (sql_context.read
            .option('inferSchema', 'true')
            .load('ratings.csv')
            .select('userId', 'movieId', 'rating'))
-ratings = ratings.limit(num_ratings).repartition(cores * 3).cache()
+ratings = ratings.limit(num_ratings).repartition(partitions).cache()
 movies = (sql_context.read
           .format('com.databricks.spark.csv')
           .option('header', 'true')
           .option('inferSchema', 'true')
           .load('movies.csv')
           .select('movieId'))
-movies = movies.repartition(cores * 3).cache()
+movies = movies.repartition(partitions).cache()
 users = ratings.select('userId').distinct()
-users = users.repartition(cores * 3).cache()
+users = users.repartition(partitions).cache()
+print(str(users.count()) + " users, " + str(ratings.count()) + " ratings, " + str(movies.count()) + " movies.")
 
-model = ALS(rank=40, maxIter=40, userCol='userId', itemCol='movieId', ratingCol='rating')
+print("Have faith...")
+model = ALS(rank=20, maxIter=20, userCol='userId', itemCol='movieId', ratingCol='rating')
 if not evaluate_only:
 # Create a matrix of all product-user combinations.
     predict_data = (ratings.select('userId').drop_duplicates(['userId'])
@@ -62,12 +66,12 @@ if not evaluate_only:
             .map(lambda x: (x.userId, [[x.prediction, x.movieId]]))
             .reduceByKey(lambda x, y: x + y)
             .mapValues(lambda x: sorted(x, reverse=True)[:10])
-            .mapValues(lambda xs: map(lambda x: x[1], xs))
             .saveAsTextFile("recs"))
 
 if evaluate:
     train, test = ratings.randomSplit([0.8, 0.2])
     evaluate = model.fit(train).transform(test)
+    evaluate.show()
     se = (evaluate.withColumn('sqerror', (col('prediction') - col('rating')) ** 2)
           .select('sqerror')
           .map(lambda x: x.sqerror)

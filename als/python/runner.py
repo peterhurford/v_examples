@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# Example usage: python runner.py --cores 36 --num_ratings 20000000
+
 from vowpal_porpoise import VW
 from datetime import datetime
 from copy import copy
