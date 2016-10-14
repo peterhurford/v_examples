@@ -23,7 +23,7 @@ evaluate = parser.parse_args().evaluate
 evaluate_only = parser.parse_args().evaluate_only is not None
 if evaluate_only and evaluate is None:
     evaluate = "ib"
-vw = VW(moniker='ALS', loss_function='quantile', learning_rate=0.1, l2=0.000001, bits=24, passes=100, quadratic='ui', lrq='ui7', power_t=0.333)
+vw = VW(moniker='ALS', learning_rate=0.1, l2=0.000001, bits=24, passes=100, quadratic='ui', rank=20, power_t=0.333)
 
 os.system("head -n {} ratings.csv | tail -n +2 > ratings_.csv".format(num_ratings + 1)) # +1 to not trim header
 os.system("tail -n +2 ratings_.csv | awk -F\",\" '{print $1}' | uniq > users.csv")
