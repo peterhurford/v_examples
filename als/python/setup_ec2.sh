@@ -6,7 +6,7 @@ sudo ln -s /usr/bin/clang-3.5 /usr/bin/clang; sudo ln -s /usr/bin/clang++-3.5 /u
 sudo apt-get -y install libboost-all-dev
 sudo apt-get -y install git
 sudo apt-get -y install unzip htop iotop bmon parallel
-git clone https://github.com/JohnLangford/vowpal_wabbit.git; cd vowpal_wabbit; make; sudo make install; cd ..
+git clone https://github.com/JohnLangford/vowpal_wabbit.git; cd vowpal_wabbit; make; sudo make install; cd cluster; sudo make install; cd ../..
 sudo apt-get -y install libblas-dev liblapack-dev libatlas-base-dev gfortran
 sudo apt-get -y install python-pip
 sudo pip install cython

@@ -10,6 +10,8 @@ import os
 import argparse
 import random
 
+print "Cleaning up..."
+os.system("rm ALS*; ratings_*; users.csv")
 print "Setting up..."
 start = datetime.now()
 parser = argparse.ArgumentParser()
@@ -23,7 +25,10 @@ evaluate = parser.parse_args().evaluate
 evaluate_only = parser.parse_args().evaluate_only is not None
 if evaluate_only and evaluate is None:
     evaluate = "ib"
-vw = VW(moniker='ALS', learning_rate=0.1, l2=0.000001, bits=24, passes=100, quadratic='ui', rank=20, power_t=0.333)
+
+def vw_model(node):
+    return VW(moniker='ALS', total=cores, node=node, unique_id=0, span_server='localhost', holdout_off=True, passes=80, quadratic='ui', rank=20, l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
+vw_instances = [vw_model(n) for n in range(cores)]
 
 os.system("head -n {} ratings.csv | tail -n +2 > ratings_.csv".format(num_ratings + 1)) # +1 to not trim header
 os.system("tail -n +2 ratings_.csv | awk -F\",\" '{print $1}' | uniq > users.csv")
@@ -55,36 +60,43 @@ ratings_file.close()
 setup_done = datetime.now()
 
 if not evaluate_only:
-    print "Jamming some train..."
-    with vw.training():
-        for user_id, user_ratings in ratings.iteritems():
-            for movie_id, rating in user_ratings.iteritems():
+    def train_on_core(core):
+        vw = vw_instances[core]
+        user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
+        vw.start_training()
+        for user_id in user_id_pool:
+            for movie_id, rating in ratings[user_id].iteritems():
                 vw_item = rating + ' |u ' + user_id + ' i ' + movie_id
                 vw.push_instance(vw_item)
-    training_done = datetime.now()
-
-    print "Spooling predictions..."
-    vw_test = [copy(vw) for _ in range(cores)]
+        vw.close_process()
 
     def predict_on_core(core):
-        vw_instance = vw_test[core]
+        vw = vw_instances[core]
         user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
-        vw_instance.start_predicting()
+        vw.start_predicting()
         for user_id in user_id_pool:
             for movie_id in movie_ids:
                 if ratings[user_id].get(movie_id) is None:
                     vw_item = "'" + user_id + "x" + movie_id + " |u " + user_id + "|i " + movie_id
-                    vw_instance.push_instance(vw_item)
-        return vw_instance.prediction_file
+                    vw.push_instance(vw_item)
+        vw.close_process()
+        return vw.prediction_file
 
     pool = Pool(cores)
+    print "Provisioning server for {} cores...".format(cores)
+    os.system("spanning_tree")
+    print "Jamming some train..."
+    pool.map(train_on_core, range(cores))
+    training_done = datetime.now()
+
+    print "Spooling predictions..."
     prediction_files = pool.map(predict_on_core, range(cores))
-# for vw_instance in vw_test:
-#     vw_instance.close_process()
     predicting_done = datetime.now()
+    print "Spinning down server..."
+    os.system("killall spanning_tree")
 
     print "Generating recs..."
-    prediction_files = [open(f) for f in prediction_files] # [vw_instance.prediction_file, 'r') for vw_instance in vw_test]
+    prediction_files = [open(f) for f in prediction_files]
     rec_files = [open('py_recs' + str(i) + '.dat', 'w') for i in range(cores)]
 
     def write_recs(user_id, user_recs, rec_file):
@@ -124,7 +136,7 @@ if not evaluate_only:
     os.system("cat py_recs* > all_py_recs.dat")
     recs_done = datetime.now()
 
-if evaluate:
+if evaluate:  #TODO: Update
     print "Evaluating..."
     if evaluate == "ib":
         print "Shuffling for ib evaluate..."
@@ -165,43 +177,17 @@ if not evaluate_only:
         print "Total: " + str(recs_done - start)
 else:
     print "Evaluating in: " + str(evaluate_done - setup_done)
+    print "Total (without evaluate): " + str(recs_done - start)
     print "Total: " + str(evaluate_done - start)
 
-# 1M
-# Set up in 0:00:01.589956
-# Training in 0:00:09.532032
-# Predicting in 0:04:28.629261
-# Reccing in 0:01:03.216326
-# Total: 0:05:42.967575
-# IB RMSE = 0.824037
-# OOB RMSE = 1.001956
+#1M
 
-# 2M
-# Set up in 0:00:03.504287
-# Training in 0:00:26.993131
-# Predicting in 0:10:16.670008
-# Reccing in 0:02:10.684090
-# Total: 0:12:57.851516
+#2M
 
-# 5M
-# Set up in 0:00:07.977441
-# Training in 0:00:32.729757
-# Predicting in 0:22:29.189496
-# Reccing in 0:05:46.371634
-# Total: 0:28:56.268328
+#5M
 
-# 10M
-# Set up in 0:00:17.477135
-# Training in 0:03:28.911870
-# Predicting in 0:46:51.979080
-# Reccing in 0:12:00.531361
-# Total: 1:02:38.899446
+#10M
 
-# 20M
-# Set up in 0:00:34.069401
-# Training in 0:09:17.816559
-# Predicting in 1:41:37.228382
-# Reccing in 0:24:58.254132
-# Total: 2:16:27.368474
+#20M
 
 # ...on c3.4xlarge (30G RAM 16 core)
