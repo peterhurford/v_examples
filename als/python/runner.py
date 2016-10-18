@@ -4,14 +4,15 @@
 
 from vowpal_porpoise import VW
 from datetime import datetime
-from copy import copy
 from multiprocessing import Pool
 import os
 import argparse
 import random
+import socket
+from retrying import retry
 
 print "Cleaning up..."
-os.system("rm ALS*; ratings_*; users.csv")
+os.system("rm ALS* ratings_* *py_recs* users.csv")
 print "Setting up..."
 start = datetime.now()
 parser = argparse.ArgumentParser()
@@ -59,29 +60,35 @@ user_file.close()
 ratings_file.close()
 setup_done = datetime.now()
 
+def train_on_core(core):
+    vw = vw_instances[core]
+    user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
+    vw.start_training()
+    for user_id in user_id_pool:
+        for movie_id, rating in ratings[user_id].iteritems():
+            vw_item = rating + ' |u ' + user_id + ' i ' + movie_id
+            vw.push_instance(vw_item)
+    vw.close_process()
+
+@retry
+def netcat(hostname, port, content):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((hostname, port))
+    s.sendall(content)
+    s.shutdown(socket.SHUT_WR)
+    data = []
+    while True:
+        datum = s.recv(1024)
+        if datum == '':
+            break
+        datum = datum.split('\n')
+        for dat in datum:
+            if dat != '':
+                data.append(dat)
+    s.close()
+    return data
+
 if not evaluate_only:
-    def train_on_core(core):
-        vw = vw_instances[core]
-        user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
-        vw.start_training()
-        for user_id in user_id_pool:
-            for movie_id, rating in ratings[user_id].iteritems():
-                vw_item = rating + ' |u ' + user_id + ' i ' + movie_id
-                vw.push_instance(vw_item)
-        vw.close_process()
-
-    def predict_on_core(core):
-        vw = vw_instances[core]
-        user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
-        vw.start_predicting()
-        for user_id in user_id_pool:
-            for movie_id in movie_ids:
-                if ratings[user_id].get(movie_id) is None:
-                    vw_item = "'" + user_id + "x" + movie_id + " |u " + user_id + "|i " + movie_id
-                    vw.push_instance(vw_item)
-        vw.close_process()
-        return vw.prediction_file
-
     pool = Pool(cores)
     print "Provisioning server for {} cores...".format(cores)
     os.system("spanning_tree")
@@ -90,50 +97,47 @@ if not evaluate_only:
     training_done = datetime.now()
 
     print "Spooling predictions..."
-    prediction_files = pool.map(predict_on_core, range(cores))
-    predicting_done = datetime.now()
-    print "Spinning down server..."
-    os.system("killall spanning_tree")
+    train_model = vw_instances[0].get_model_file()
+    initial_moniker = vw_instances[0].handle
+    
+    def daemon(port):
+        return VW(moniker=initial_moniker, daemon=True, old_model=train_model, holdout_off=True, quiet=True, port=port, num_children=2).start_predicting()
+    daemons = [daemon(port) for port in range(4040, 4040 + cores)]
 
-    print "Generating recs..."
-    prediction_files = [open(f) for f in prediction_files]
     rec_files = [open('py_recs' + str(i) + '.dat', 'w') for i in range(cores)]
-
-    def write_recs(user_id, user_recs, rec_file):
-        user_recs.sort(reverse=True)
-        rec_file.write(str({'user': user_id,
-                            'products': map(lambda x: x[1], user_recs[:10])}) + '\n')
-
     def rec_for_user(core):
-        pfile = prediction_files[core]
         rfile = rec_files[core]
-        current_user_id = None
-        user_recs = []
-        while True:
-            line = pfile.readline()
-            if not line:
-                write_recs(current_user_id, user_recs, rfile)
-                rfile.flush()
-                break
-            line = line.split(' ')
-            pred = float(line[0])
-            data = line[1].split('x')
-            user_id = data[0]
-            movie_id = int(data[1])
-            if current_user_id is None:
-                current_user_id = user_id
-            if user_id != current_user_id:
-                write_recs(current_user_id, user_recs, rfile)
-                current_user_id = user_id
-                user_recs = []
-            user_recs.append([pred, movie_id])
+        port = 4040 + core
+        user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
+        for user_id in user_id_pool:
+            vw_items = ''
+            user_recs = []
+            for movie_id in movie_ids:
+                if ratings[user_id].get(movie_id) is None:
+                    vw_items += '|u ' + user_id + '|i ' + movie_id + '\n'
+            print 'Connecting to port %i...' % port
+            preds = netcat('localhost', port, vw_items)
+            pos = 0
+            for movie_id in movie_ids:
+                if ratings[user_id].get(movie_id) is None:
+                    user_recs.append([float(preds[pos]), movie_id])
+                    pos += 1
+            user_recs.sort(reverse=True)
+            rfile.write(str({'user': user_id,
+                            'products': map(lambda x: x[1], user_recs[:10])}) + '\n')
+        rfile.flush()
+
     pool = Pool(cores)
     pool.map(rec_for_user, range(cores))
-    for f in prediction_files:
-        f.close()
     for f in rec_files:
         f.close()
     os.system("cat py_recs* > all_py_recs.dat")
+
+    print "Spinning down server..."
+    os.system("killall spanning_tree")
+    for port in range(4040, 4040 + cores):
+        print "Spinning down port %i" % port
+        os.system("pkill -9 -f 'vw.*--port %i'" % port)
     recs_done = datetime.now()
 
 if evaluate:  #TODO: Update
@@ -141,43 +145,61 @@ if evaluate:  #TODO: Update
     if evaluate == "ib":
         print "Shuffling for ib evaluate..."
         os.system("gshuf ratings_.csv > ratings__.csv; mv ratings__.csv ratings_.csv")
-    ratings_file = open('ratings_.csv', 'r')
-    vw2 = copy(vw)
-    num_train = int(num_ratings * 0.8)
-    with vw2.training():
-        for i in xrange(num_train):
-            item = ratings_file.readline()
-            item = item.split(',')
-            rating = item[2]
-            user_id = item[0]
-            movie_id = item[1]
-            vw_item = rating + ' |u ' + user_id + ' i ' + movie_id
-            vw2.push_instance(vw_item)
-    with vw2.predicting():
-        for i in xrange(num_ratings - num_train):
-            item = ratings_file.readline()
-            item = item.split(',')
-            rating = item[2]
-            user_id = item[0]
-            movie_id = item[1]
-            vw_item = rating + ' |u ' + user_id + ' i ' + movie_id
-            vw2.push_instance(vw_item)
+    os.system("gsplit -d -l {} ratings_.csv".format(int(num_ratings * 0.8)))
+    os.system("mv x00 ratings_train.dat; mv x01 ratings_test.dat")
+    ratings_file = open('ratings_train.dat', 'r')
+    while True:
+        item = ratings_file.readline()
+        if not item:
+            break
+        item = item.split(',')
+        rating = item[2]
+        user_id = item[0]
+        movie_id = item[1]
+        if ratings.get(user_id) is None:
+            ratings[user_id] = {} 
+        ratings[user_id][movie_id] = rating
+    pool = Pool(cores)
+    pool.map(train_on_core, range(cores))
+
+    def evaluate_on_core(core):
+        vw = vw_instances[core]
+        user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
+        vw.start_predicting()
+        for user_id in user_id_pool:
+            for movie_id, rating in ratings[user_id].iteritems():
+                vw_item = rating + ' |u ' + user_id + ' i ' + movie_id
+                vw.push_instance(vw_item)
+        vw.close_process()
+    ratings_file = open('ratings_test.dat', 'r')
+    while True:
+        item = ratings_file.readline()
+        if not item:
+            break
+        item = item.split(',')
+        rating = item[2]
+        user_id = item[0]
+        movie_id = item[1]
+        if ratings.get(user_id) is None:
+            ratings[user_id] = {} 
+        ratings[user_id][movie_id] = rating
+    pool = Pool(cores)
+    pool.map(train_on_core, range(cores))
     evaluate_done = datetime.now()
 
 print "Timing..."
 print "Set up in " + str(setup_done - start)
 if not evaluate_only:
     print "Training in " + str(training_done - setup_done)
-    print "Predicting in " + str(predicting_done - training_done)
-    print "Reccing in " + str(recs_done - predicting_done)
+    print "Reccing in " + str(recs_done - training_done)
     if evaluate:
         print "Evaluating in: " + str(evaluate_done - recs_done)
+        print "Total (without evaluate): " + str(recs_done - start)
         print "Total: " + str(evaluate_done - start)
     else:
         print "Total: " + str(recs_done - start)
 else:
     print "Evaluating in: " + str(evaluate_done - setup_done)
-    print "Total (without evaluate): " + str(recs_done - start)
     print "Total: " + str(evaluate_done - start)
 
 #1M
