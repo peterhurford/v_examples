@@ -209,11 +209,28 @@ else:
 # Total: 0:01:44.931447
 
 #2M
+# Set up in 0:00:02.629749
+# Training in 0:00:32.358522
+# Reccing in 0:02:40.497983
+# Total: 0:03:15.486254
 
 #5M
+# Set up in 0:00:06.840877
+# Training in 0:00:44.052366
+# Reccing in 0:06:34.695909
+# Total: 0:07:25.589152
 
 #10M
+# Set up in 0:00:13.321389
+# Training in 0:01:06.611161
+# Reccing in 0:14:10.492325
+# Total: 0:15:30.424875
 
 #20M
+# Set up in 0:00:27.044442
+# Training in 0:01:46.621141
+# Reccing in 0:33:12.592734
+# Total: 0:35:26.258317
+
 
 # ...on m4.16xlarge (64 core 256GB)
