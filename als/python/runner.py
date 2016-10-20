@@ -203,6 +203,10 @@ else:
     print "Total: " + str(evaluate_done - start)
 
 #1M
+# Set up in 0:00:01.337433
+# Training in 0:00:26.205371
+# Reccing in 0:01:17.388643
+# Total: 0:01:44.931447
 
 #2M
 
@@ -212,4 +216,4 @@ else:
 
 #20M
 
-# ...on c3.4xlarge (30G RAM 16 core)
+# ...on m4.16xlarge (64 core 256GB)
