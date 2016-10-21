@@ -14,5 +14,3 @@ sudo -H pip install numpy
 sudo -H pip install scipy
 sudo -H pip install retrying
 git clone https://github.com/peterhurford/vowpal_porpoise.git; cd vowpal_porpoise; sudo python setup.py install; cd ..
-
-# Also be sure to scp up the zip file and the runner

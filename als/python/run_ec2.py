@@ -11,7 +11,9 @@ def ssh_client(instance, key_path):
     print "s"
     return sshclient_from_instance(instance, key_path, user_name='ubuntu')
 
+@retry(wait_fixed=5000)
 def scp(key_path, dns, source, target=None):
+    print "s"
     if target is None:
         target='~/' + source
     os.system('scp -i ' + key_path + ' ' + source + ' ' + 'ubuntu@' + dns + ':' + target)
@@ -22,10 +24,11 @@ secret_key = os.environ['AWS_SECRET_ACCESS_KEY']
 conn = boto.ec2.connect_to_region("us-west-2",
                                   aws_access_key_id=access_key,
                                   aws_secret_access_key=secret_key)
-#reservation = conn.get_all_reservations()[2]
+# TODO: Be able to recover without booting up a new instance.
+# reservation = conn.get_all_reservations()[3]
 reservation = conn.run_instances('ami-d732f0b7',
                                  key_name='VWProto',
-                                 instance_type='m4.16xlarge',
+                                 instance_type='m4.10xlarge',
                                  security_groups=['launch-wizard-4'])
 instance = reservation.instances[0]
 print('Launching instance {}...'.format(instance.id))
@@ -66,7 +69,7 @@ print(ssh_client.run('unzip ml-20m.zip'))
 
 print("Running...")
 scp(key_path, instance.dns_name, source='runner.py', target='ml-20m/runner.py')
-#print(ssh_client.run('cd ml-20m; python runner.py --cores 64 --num_ratings 2000000'))
+print(ssh_client.run('cd ml-20m; python runner.py --cores 64 --num_ratings 2000000'))
 import pdb
 pdb.set_trace()
 conn.terminate_instances(instance.id)
