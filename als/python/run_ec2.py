@@ -25,7 +25,7 @@ conn = boto.ec2.connect_to_region("us-west-2",
                                   aws_access_key_id=access_key,
                                   aws_secret_access_key=secret_key)
 # TODO: Be able to recover without booting up a new instance.
-# reservation = conn.get_all_reservations()[3]
+# reservation = conn.get_all_reservations()[1]
 reservation = conn.run_instances('ami-d732f0b7',
                                  key_name='VWProto',
                                  instance_type='m4.10xlarge',
@@ -63,13 +63,20 @@ print("Bootstrapping...")
 scp(key_path, instance.dns_name, 'setup_ec2.sh')
 print(ssh_client.run('./setup_ec2.sh'))
 
+print("Mounting volume...")
+print(ssh_client_run(ssh_client, 'sudo mkdir /vol'))
+print(ssh_client_run(ssh_client, 'sudo apt-get -y install xfsprogs'))
+print(ssh_client_run(ssh_client, 'sudo mkfs.xfs -q /dev/xvdx'))
+print(ssh_client_run(ssh_client, 'sudo mount -o "defaults,noatime,nodiratime" /dev/xvdx /vol'))
+print(ssh_client_run(ssh_client, 'sudo chmod 777 /vol'))
+
 print("Uploading ml-20m...")
 scp(key_path, instance.dns_name, source='~/Downloads/ml-20m.zip', target='ml-20m.zip')
 print(ssh_client.run('unzip ml-20m.zip'))
 
 print("Running...")
 scp(key_path, instance.dns_name, source='runner.py', target='ml-20m/runner.py')
-print(ssh_client.run('cd ml-20m; python runner.py --cores 64 --num_ratings 2000000'))
+# print(ssh_client.run('cd ml-20m; python runner.py --cores 64 --num_ratings 2000000'))
 import pdb
 pdb.set_trace()
 conn.terminate_instances(instance.id)
