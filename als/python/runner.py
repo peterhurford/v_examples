@@ -28,7 +28,7 @@ if evaluate_only and evaluate is None:
     evaluate = "ib"
 
 def vw_model(node):
-    return VW(moniker='ALS', total=cores, node=node, unique_id=0, span_server='localhost', holdout_off=True, passes=80, quadratic='ui', rank=20, l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
+    return VW(moniker='ALS', total=cores, node=node, unique_id=0, span_server='localhost', holdout_off=True, bits=21, passes=40, quadratic='ui', rank=25, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
 vw_instances = [vw_model(n) for n in range(cores)]
 
 os.system("head -n {} ratings.csv | tail -n +2 > ratings_.csv".format(num_ratings + 1)) # +1 to not trim header
@@ -66,7 +66,7 @@ def train_on_core(core):
     vw.start_training()
     for user_id in user_id_pool:
         for movie_id, rating in ratings[user_id].iteritems():
-            vw_item = rating + ' |u ' + user_id + ' i ' + movie_id
+            vw_item = rating + ' |u ' + user_id + ' |i ' + movie_id
             vw.push_instance(vw_item)
     vw.close_process()
 
@@ -88,10 +88,10 @@ def netcat(hostname, port, content):
     s.close()
     return data
 
+os.system("spanning_tree")
 if not evaluate_only:
     pool = Pool(cores)
     print "Provisioning server for {} cores...".format(cores)
-    os.system("spanning_tree")
     print "Jamming some train..."
     pool.map(train_on_core, range(cores))
     training_done = datetime.now()
@@ -114,7 +114,7 @@ if not evaluate_only:
             user_recs = []
             for movie_id in movie_ids:
                 if ratings[user_id].get(movie_id) is None:
-                    vw_items += '|u ' + user_id + '|i ' + movie_id + '\n'
+                    vw_items += '|u ' + user_id + ' |i ' + movie_id + '\n'
             print 'Connecting to port %i...' % port
             preds = netcat('localhost', port, vw_items)
             pos = 0
@@ -131,23 +131,16 @@ if not evaluate_only:
     pool.map(rec_for_user, range(cores))
     for f in rec_files:
         f.close()
-    os.system("cat py_recs* > all_py_recs.dat")
+    os.system("cat py_recs* > all_py_recs.csv")
 
-    print "Spinning down server..."
-    os.system("killall spanning_tree")
-    for port in range(4040, 4040 + cores):
-        print "Spinning down port %i" % port
-        os.system("pkill -9 -f 'vw.*--port %i'" % port)
-    recs_done = datetime.now()
-
-if evaluate:  #TODO: Update
+if evaluate:
     print "Evaluating..."
     if evaluate == "ib":
         print "Shuffling for ib evaluate..."
         os.system("gshuf ratings_.csv > ratings__.csv; mv ratings__.csv ratings_.csv")
-    os.system("gsplit -d -l {} ratings_.csv".format(int(num_ratings * 0.8)))
-    os.system("mv x00 ratings_train.dat; mv x01 ratings_test.dat")
-    ratings_file = open('ratings_train.dat', 'r')
+    os.system("gsplit -d -l {} ratings_.csv".format(int(num_ratings * 0.9)))
+    os.system("mv x00 ratings_train.csv; mv x01 ratings_test.csv")
+    ratings_file = open('ratings_train.csv', 'r')
     while True:
         item = ratings_file.readline()
         if not item:
@@ -162,16 +155,11 @@ if evaluate:  #TODO: Update
     pool = Pool(cores)
     pool.map(train_on_core, range(cores))
 
-    def evaluate_on_core(core):
-        vw = vw_instances[core]
-        user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
-        vw.start_predicting()
-        for user_id in user_id_pool:
-            for movie_id, rating in ratings[user_id].iteritems():
-                vw_item = rating + ' |u ' + user_id + ' i ' + movie_id
-                vw.push_instance(vw_item)
-        vw.close_process()
-    ratings_file = open('ratings_test.dat', 'r')
+    train_model = vw_instances[0].get_model_file()
+    initial_moniker = vw_instances[0].handle
+
+    ratings = {}
+    ratings_file = open('ratings_test.csv', 'r')
     while True:
         item = ratings_file.readline()
         if not item:
@@ -183,9 +171,37 @@ if evaluate:  #TODO: Update
         if ratings.get(user_id) is None:
             ratings[user_id] = {} 
         ratings[user_id][movie_id] = rating
+    
+    def daemon(port):
+        return VW(moniker=initial_moniker, daemon=True, old_model=train_model, holdout_off=True, quiet=True, port=port, num_children=2).start_predicting()
+    daemons = [daemon(port) for port in range(4040, 4040 + cores)]
+
+    def evaluate_on_core(core):
+        port = 4040 + core
+        user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
+        rmse = []
+        for user_id in user_id_pool:
+            vw_items = ''
+            if ratings.get(user_id) is not None:
+                for movie_id, rating in ratings[user_id].iteritems():
+                    vw_items += '|u ' + user_id + ' |i ' + movie_id + '\n'
+                print 'Connecting to port %i...' % port
+                preds = netcat('localhost', port, vw_items)
+                rmse.append(sum(map(lambda x: (float(x[0]) - float(x[1])) ** 2,
+                                    zip(preds, ratings[user_id].values()))))
+        return sum(rmse)
     pool = Pool(cores)
-    pool.map(train_on_core, range(cores))
+    rmse = pool.map(evaluate_on_core, range(cores))
+    num_test_ratings = sum(map(lambda u: len(ratings[u]) if ratings.get(u) else 0, user_ids))
+    print("RMSE: " + str((sum(rmse) / num_test_ratings) ** 0.5))
     evaluate_done = datetime.now()
+
+print "Spinning down server..."
+os.system("killall spanning_tree")
+for port in range(4040, 4040 + cores):
+    print "Spinning down port %i" % port
+    os.system("pkill -9 -f 'vw.*--port %i'" % port)
+recs_done = datetime.now()
 
 print "Timing..."
 print "Set up in " + str(setup_done - start)
@@ -231,6 +247,5 @@ else:
 # Training in 0:01:46.621141
 # Reccing in 0:33:12.592734
 # Total: 0:35:26.258317
-
 
 # ...on m4.16xlarge (64 core 256GB)
