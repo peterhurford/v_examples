@@ -21,6 +21,7 @@ def train_on_core(core):
             vw_item = rating + ' |u ' + user_id + ' |i ' + movie_id
             vw.push_instance(vw_item)
     vw.close_process()
+    return None
 
 @retry
 def netcat(hostname, port, content):
@@ -42,8 +43,11 @@ def netcat(hostname, port, content):
     s.close()
     return data
     
-def vw_model(node, volume):
-    return VW(moniker='{}ALS'.format(volume), total=train_cores, node=node, unique_id=0, span_server='localhost', holdout_off=True, bits=21, passes=40, quadratic='ui', rank=25, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
+def vw_model(node, volume, parallel=True):
+    if parallel:
+        return VW(moniker='{}ALS'.format(volume), total=train_cores, node=node, unique_id=0, span_server='localhost', holdout_off=True, bits=21, passes=40, quadratic='ui', rank=25, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
+    else:
+        return VW(moniker='{}ALS'.format(volume), holdout_off=True, bits=21, passes=40, quadratic='ui', rank=25, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
 
 def daemon(core):
     port = core + 4040
@@ -135,9 +139,6 @@ print "Cleaning up..."
 targets = ['ALS*', 'ratings_*', '*recs*', 'users.csv']
 [os.system('rm ' + volume + target) for target in targets]
 
-print "Booting models..."
-vw_instances = [vw_model(n, volume) for n in range(train_cores)]
-
 print "Formating data..."
 os.system("head -n {} ratings.csv | tail -n +2 > ratings_.csv".format(num_ratings + 1)) # +1 to not trim header
 os.system("tail -n +2 ratings_.csv | awk -F\",\" '{print $1}' | uniq > users.csv")
@@ -157,11 +158,20 @@ user_file.close()
 ratings_file.close()
 setup_done = datetime.now()
 
-os.system("spanning_tree")
+print "Booting models..."
+if train_cores > 1:
+    os.system("spanning_tree")
+    vw_instances = [vw_model(n, volume) for n in range(train_cores)]
+else:
+    vw_instances = [vw_model(0, volume, parallel=False)]
+
 if not evaluate_only:
     print "Jamming some train on {} cores...".format(train_cores)
-    pool = Pool(train_cores)
-    pool.map(train_on_core, range(train_cores))
+    if train_cores > 1:
+        pool = Pool(train_cores)
+        pool.map(train_on_core, range(train_cores))
+    else:
+        train_on_core(0)
     training_done = datetime.now()
 
     print "Spooling predictions on {} cores...".format(predict_cores)
@@ -170,9 +180,14 @@ if not evaluate_only:
 
     rec_files = [open('{}/py_recs'.format(volume) + str(i) + '.dat', 'w') for i in range(predict_cores)]
 
-    daemons = [daemon(core) for core in random.sample(range(predict_cores), predict_cores)]
-    pool = Pool(predict_cores)
-    pool.map(rec_for_user, range(predict_cores))
+    if predict_cores > 1:
+        daemons = [daemon(core) for core in random.sample(range(predict_cores), predict_cores)]
+        pool = Pool(predict_cores)
+        pool.map(rec_for_user, range(predict_cores))
+    else:
+        daemons = [daemon(0)]
+        rec_for_user(0)
+
     for f in rec_files:
         f.close()
     os.system('cat {}/py_recs* > {}/all_py_recs.csv'.format(volume, volume))
@@ -193,22 +208,30 @@ if evaluate:
     os.system("mv x00 ratings_train.csv; mv x01 ratings_test.csv")
     ratings_file = open('ratings_train.csv', 'r')
     ratings = compile_ratings(ratings_file)
-    pool = Pool(train_cores)
-    pool.map(train_on_core, range(train_cores))
+    if train_cores > 1:
+        pool = Pool(train_cores)
+        pool.map(train_on_core, range(train_cores))
+    else:
+        train_on_core(0)
 
     ratings = {}
     ratings_file = open('ratings_test.csv', 'r')
     ratings = compile_ratings(ratings_file)
 
-    daemons = [daemon(core) for core in random.sample(range(predict_cores), predict_cores)]
-    pool = Pool(predict_cores)
-    rmses = pool.map(evaluate_on_core, range(predict_cores))
-    rmse = (sum(rmses) / predict_cores) ** 0.5
+    if predict_cores > 1:
+        daemons = [daemon(core) for core in random.sample(range(predict_cores), predict_cores)]
+        pool = Pool(predict_cores)
+        rmses = pool.map(evaluate_on_core, range(predict_cores))
+        rmse = (sum(rmses) / predict_cores) ** 0.5
+    else:
+        daemons = [daemon(0)]
+        rmse = evaluate_on_core(0)
     print("RMSE: " + str(rmse))
     evaluate_done = datetime.now()
 
 print "Spinning down server..."
-os.system("killall spanning_tree")
+if train_cores > 1:
+    os.system("killall spanning_tree")
 for port in range(4040, 4040 + predict_cores):
     print "Spinning down port %i" % port
     os.system("pkill -9 -f 'vw.*--port %i'" % port)
@@ -227,35 +250,3 @@ if not evaluate_only:
 else:
     print "Evaluating in: " + str(evaluate_done - setup_done)
     print "Total: " + str(evaluate_done - start)
-
-#1M
-# Set up in 0:00:01.337433
-# Training in 0:00:26.205371
-# Reccing in 0:01:17.388643
-# Total: 0:01:44.931447
-
-#2M
-# Set up in 0:00:02.629749
-# Training in 0:00:32.358522
-# Reccing in 0:02:40.497983
-# Total: 0:03:15.486254
-
-#5M
-# Set up in 0:00:06.840877
-# Training in 0:00:44.052366
-# Reccing in 0:06:34.695909
-# Total: 0:07:25.589152
-
-#10M
-# Set up in 0:00:13.321389
-# Training in 0:01:06.611161
-# Reccing in 0:14:10.492325
-# Total: 0:15:30.424875
-
-#20M
-# Set up in 0:00:27.044442
-# Training in 0:01:46.621141
-# Reccing in 0:33:12.592734
-# Total: 0:35:26.258317
-
-# ...on m4.16xlarge (64 core 256GB)
