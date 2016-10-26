@@ -11,7 +11,6 @@ import random
 import socket
 from retrying import retry
 
-
 def train_on_core(core):
     vw = vw_instances[core]
     user_id_pool = filter(lambda x: int(x) % train_cores == core, user_ids)
@@ -23,7 +22,7 @@ def train_on_core(core):
     vw.close_process()
     return None
 
-@retry
+@retry(wait_fixed=1000)
 def netcat(hostname, port, content):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((hostname, port))
@@ -75,22 +74,16 @@ def rec_for_user(core):
     port = 4040 + core
     user_id_pool = filter(lambda x: int(x) % predict_cores == core, user_ids)
     for user_id in user_id_pool:
-        vw_items = ''
-        user_recs = []
-        for movie_id in movie_ids:
-            if ratings[user_id].get(movie_id) is None:
-                vw_items += '|u ' + user_id + ' |i ' + movie_id + '\n'
+        unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
+        vw_items = ''.join(map(lambda m: '|u ' + user_id + ' |i ' + m + '\n', unseen_movie_ids))
         print 'Connecting to port %i...' % port
         preds = netcat('localhost', port, vw_items)
-        pos = 0
-        for movie_id in movie_ids:
-            if ratings[user_id].get(movie_id) is None:
-                user_recs.append([float(preds[pos]), movie_id])
-                pos += 1
+        user_recs = [list(a) for a in zip(preds, unseen_movie_ids)]
         user_recs.sort(reverse=True)
         rfile.write(str({'user': user_id,
                         'products': map(lambda x: x[1], user_recs[:10])}) + '\n')
     rfile.flush()
+    return None
 
 def evaluate_on_core(core):
     port = 4040 + core
