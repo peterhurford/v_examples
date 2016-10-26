@@ -76,7 +76,7 @@ def rec_for_user(core):
     for user_id in user_id_pool:
         unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
         vw_items = ''.join(map(lambda m: '|u ' + user_id + ' |i ' + m + '\n', unseen_movie_ids))
-        print 'Connecting to port %i...' % port
+        print('Connecting to port %i...' % port)
         preds = netcat('localhost', port, vw_items)
         user_recs = [list(a) for a in zip(preds, unseen_movie_ids)]
         user_recs.sort(reverse=True)
@@ -96,14 +96,14 @@ def evaluate_on_core(core):
             for movie_id, rating in ratings[user_id].iteritems():
                 vw_items += '|u ' + user_id + ' |i ' + movie_id + '\n'
                 user_ratings.append(float(rating))
-            print 'Connecting to port %i...' % port
+            print('Connecting to port %i...' % port)
             preds = netcat('localhost', port, vw_items)
             all_preds.append(zip(preds, user_ratings))
     all_preds = sum(all_preds, [])
     return sum(map(lambda x: (float(x[0]) - float(x[1])) ** 2, all_preds)) / len(all_preds)
 
 
-print "Setting up..."
+print("Setting up...")
 start = datetime.now()
 parser = argparse.ArgumentParser()
 parser.add_argument('--volume')
@@ -128,11 +128,11 @@ evaluate_only = parser.parse_args().evaluate_only
 if evaluate_only and (evaluate is None or evaluate is False):
     evaluate = "ib"
 
-print "Cleaning up..."
+print("Cleaning up...")
 targets = ['ALS*', 'ratings_*', '*recs*', 'users.csv']
 [os.system('rm ' + volume + target) for target in targets]
 
-print "Formating data..."
+print("Formating data...")
 os.system("head -n {} ratings.csv | tail -n +2 > ratings_.csv".format(num_ratings + 1)) # +1 to not trim header
 os.system("tail -n +2 ratings_.csv | awk -F\",\" '{print $1}' | uniq > users.csv")
 
@@ -151,7 +151,7 @@ user_file.close()
 ratings_file.close()
 setup_done = datetime.now()
 
-print "Booting models..."
+print("Booting models...")
 if train_cores > 1:
     os.system("spanning_tree")
     vw_instances = [vw_model(n, volume) for n in range(train_cores)]
@@ -159,7 +159,7 @@ else:
     vw_instances = [vw_model(0, volume, parallel=False)]
 
 if not evaluate_only:
-    print "Jamming some train on {} cores...".format(train_cores)
+    print("Jamming some train on {} cores...".format(train_cores))
     if train_cores > 1:
         pool = Pool(train_cores)
         pool.map(train_on_core, range(train_cores))
@@ -167,7 +167,7 @@ if not evaluate_only:
         train_on_core(0)
     training_done = datetime.now()
 
-    print "Spooling predictions on {} cores...".format(predict_cores)
+    print("Spooling predictions on {} cores...".format(predict_cores))
     train_model = vw_instances[0].get_model_file()
     initial_moniker = vw_instances[0].handle
 
@@ -187,9 +187,9 @@ if not evaluate_only:
     recs_done = datetime.now()
 
 if evaluate:
-    print 'Evaluating...'
+    print('Evaluating...')
     if evaluate == 'ib':
-        print 'Shuffling for ib evaluate...'
+        print('Shuffling for ib evaluate...')
         if op_sys == 'mac':
             shuf = 'gshuf'
             split = 'gsplit'
@@ -222,24 +222,24 @@ if evaluate:
     print("RMSE: " + str(rmse))
     evaluate_done = datetime.now()
 
-print "Spinning down server..."
+print("Spinning down server...")
 if train_cores > 1:
     os.system("killall spanning_tree")
 for port in range(4040, 4040 + predict_cores):
-    print "Spinning down port %i" % port
+    print("Spinning down port %i" % port)
     os.system("pkill -9 -f 'vw.*--port %i'" % port)
 
-print "Timing..."
-print "Set up in " + str(setup_done - start)
+print("Timing...")
+print("Set up in " + str(setup_done - start))
 if not evaluate_only:
-    print "Training in " + str(training_done - setup_done)
-    print "Reccing in " + str(recs_done - training_done)
+    print("Training in " + str(training_done - setup_done))
+    print("Reccing in " + str(recs_done - training_done))
     if evaluate:
-        print "Evaluating in: " + str(evaluate_done - recs_done)
-        print "Total (without evaluate): " + str(recs_done - start)
-        print "Total: " + str(evaluate_done - start)
+        print("Evaluating in: " + str(evaluate_done - recs_done))
+        print("Total (without evaluate): " + str(recs_done - start))
+        print("Total: " + str(evaluate_done - start))
     else:
-        print "Total: " + str(recs_done - start)
+        print("Total: " + str(recs_done - start))
 else:
-    print "Evaluating in: " + str(evaluate_done - setup_done)
-    print "Total: " + str(evaluate_done - start)
+    print("Evaluating in: " + str(evaluate_done - setup_done))
+    print("Total: " + str(evaluate_done - start))
