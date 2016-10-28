@@ -13,7 +13,7 @@ from retrying import retry
 
 def train_on_core(core):
     vw = vw_instances[core]
-    user_id_pool = filter(lambda x: int(x) % train_cores == core, user_ids)
+    user_id_pool = filter(lambda x: int(x) % train_cores == core, rated_users)
     vw.start_training()
     for user_id in user_id_pool:
         for movie_id, rating in ratings[user_id].iteritems():
@@ -74,7 +74,10 @@ def rec_for_user(core):
     port = 4040 + core
     user_id_pool = filter(lambda x: int(x) % predict_cores == core, user_ids)
     for user_id in user_id_pool:
-        unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
+        if ratings.get(user_id) is not None:
+            unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
+        else:
+            unseen_movie_ids = movie_ids
         vw_items = ''.join(map(lambda m: '|u ' + user_id + ' |i ' + m + '\n', unseen_movie_ids))
         print('Connecting to port %i...' % port)
         preds = netcat('localhost', port, vw_items)
@@ -110,7 +113,6 @@ parser.add_argument('--volume')
 parser.add_argument('--op_sys')
 parser.add_argument('--train_cores')
 parser.add_argument('--predict_cores')
-parser.add_argument('--num_ratings')
 parser.add_argument('--evaluate')
 parser.add_argument('--evaluate_only', action='store_true', default=False)
 volume = parser.parse_args().volume
@@ -122,19 +124,18 @@ if op_sys is None:
     op_sys = 'ubuntu'
 train_cores = int(parser.parse_args().train_cores)
 predict_cores = int(parser.parse_args().predict_cores)
-num_ratings = int(parser.parse_args().num_ratings)
 evaluate = parser.parse_args().evaluate
 evaluate_only = parser.parse_args().evaluate_only
 if evaluate_only and (evaluate is None or evaluate is False):
     evaluate = "ib"
 
 print("Cleaning up...")
-targets = ['ALS*', 'ratings_*', '*recs*', 'users.csv']
+targets = ['ALS*', 'ratings_*', '*recs*']
 [os.system('rm ' + volume + target) for target in targets]
 
 print("Formating data...")
+num_ratings = sum(1 for line in open('{}ratings.csv'.format(volume)))
 os.system("head -n {} {}ratings.csv | tail -n +2 > {}ratings_.csv".format(num_ratings + 1, volume, volume)) # +1 to not trim header
-os.system("tail -n +2 " + volume + "ratings_.csv | awk -F\",\" '{print $1}' | uniq > " + volume + "users.csv")
 
 ratings_file = open('{}ratings_.csv'.format(volume), 'r')
 movie_file = open('{}movies.csv'.format(volume), 'r')
@@ -145,6 +146,7 @@ movie_ids.pop(0) # Throw out headers
 user_ids.pop(0)
 
 ratings = compile_ratings(ratings_file)
+rated_users = ratings.keys()
 
 movie_file.close()
 user_file.close()

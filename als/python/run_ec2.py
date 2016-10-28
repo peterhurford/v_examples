@@ -28,7 +28,7 @@ conn = boto.ec2.connect_to_region("us-west-2",
 # reservation = conn.get_all_reservations()[1]
 reservation = conn.run_instances('ami-d732f0b7',
                                  key_name='VWProto',
-                                 instance_type='m4.10xlarge',
+                                 instance_type='c4.4xlarge',
                                  security_groups=['launch-wizard-4'])
 instance = reservation.instances[0]
 print('Launching instance {}...'.format(instance.id))
@@ -38,7 +38,7 @@ while instance.update() != "running":
     time.sleep(5)
 
 key_path = os.path.join(os.path.expanduser('~/.ssh'), 'VWProto.pem')
-volume = conn.create_volume(200, instance.placement)
+volume = conn.create_volume(400, instance.placement, volume_type='io1', iops=20000)
 print('Creating volume {}...'.format(volume.id))
 while volume.update() != 'available':
     sys.stdout.write('w')
@@ -64,11 +64,11 @@ scp(key_path, instance.dns_name, 'setup_ec2.sh')
 print(ssh_client.run('./setup_ec2.sh'))
 
 print("Mounting volume...")
-print(ssh_client_run(ssh_client, 'sudo mkdir /vol'))
-print(ssh_client_run(ssh_client, 'sudo apt-get -y install xfsprogs'))
-print(ssh_client_run(ssh_client, 'sudo mkfs.xfs -q /dev/xvdx'))
-print(ssh_client_run(ssh_client, 'sudo mount -o "defaults,noatime,nodiratime" /dev/xvdx /vol'))
-print(ssh_client_run(ssh_client, 'sudo chmod 777 /vol'))
+print(ssh_client.run('sudo mkdir /vol'))
+print(ssh_client.run('sudo apt-get -y install xfsprogs'))
+print(ssh_client.run('sudo mkfs.xfs -q /dev/xvdx'))
+print(ssh_client.run('sudo mount -o "defaults,noatime,nodiratime" /dev/xvdx /vol'))
+print(ssh_client.run('sudo chmod 777 /vol'))
 
 print("Uploading ml-20m...")
 scp(key_path, instance.dns_name, source='~/Downloads/ml-20m.zip', target='ml-20m.zip')
