@@ -8,27 +8,12 @@ import os
 import pandas
 import xgboost
 import random
-from sklearn import metrics, datasets
+from sklearn import metrics
 
 ## Import
 titanic = pandas.read_csv("../data/titanic.csv")
 
-
 ## Impute NAs with Median
-print titanic.isnull().apply(sum)
-# PassengerId      0
-# Survived         0
-# Pclass           0
-# Name             0
-# Sex              0
-# Age            177
-# SibSp            0
-# Parch            0
-# Ticket           0
-# Fare             0
-# Cabin          687
-# Embarked         2
-
 def impute(col):
   if col.apply(numpy.isreal).all(axis = 0):
     value = numpy.nanmedian(col)
@@ -36,25 +21,11 @@ def impute(col):
     value = col.mode().iloc[0]
   return col.fillna(value)
 
-
 for col in titanic.columns[titanic.isnull().any(axis = 0)]:
   titanic[col] = impute(titanic[col])
 
-print titanic.isnull().apply(sum)
-# PassengerId    0
-# Survived       0
-# Pclass         0
-# Name           0
-# Sex            0
-# Age            0
-# SibSp          0
-# Parch          0
-# Ticket         0
-# Fare           0
-# Cabin          0
-# Embarked       0
 
-
+# Add title data
 def split_to_title(x):
   return x.split(".")[0].split(",")[1].strip()
 
@@ -64,18 +35,6 @@ for title in ["Capt", "Don", "Major"]:
   titanic["Title"].replace(title, "Sir", inplace = True)
 for title in ["Dona", "Lady", "the Countess", "Jonkheer"]:
   titanic["Title"].replace(title, "Sir", inplace = True)
-
-titanic["Title"].value_counts()
-# Mr        517
-# Miss      182
-# Mrs       125
-# Master     40
-# Sir         8
-# Dr          7
-# Rev         6
-# Mlle        3
-# Col         2
-# Ms          1
 
 
 ## Fit XGB
@@ -125,5 +84,5 @@ def predict(titanic_test, dep_var_test):
 print "AUC: " + str(predict(titanic_test, dep_var_test))
 print "Time: " + str(datetime.now() - start)
 
-# AUC: 0.76245210728
-# Time: 0:00:00.646733
+# AUC: 0.810606060606
+# Time: 0:00:00.675874
