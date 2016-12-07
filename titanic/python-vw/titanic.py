@@ -71,7 +71,7 @@ all_results = zip(vw_model.read_predictions(), actuals)
 preds = map(lambda x: x[0], all_results)
 actuals = map(lambda x: x[1], all_results)
 
-## Impute NAs with Median
+## TODO: Impute NAs with Median
 # def impute(col):
 #   if col.apply(numpy.isreal).all(axis = 0):
 #     value = numpy.nanmedian(col)
@@ -82,8 +82,7 @@ actuals = map(lambda x: x[1], all_results)
 # for col in titanic.columns[titanic.isnull().any(axis = 0)]:
 #   titanic[col] = impute(titanic[col])
 
-mean_pred = numpy.mean(preds)
-d_preds = map(lambda x: -1 if x < mean_pred else 1, preds)
+d_preds = map(lambda x: -1 if x < 0.0 else 1, preds)
 print 'ROC: ' + str(metrics.roc_auc_score(numpy.array(d_preds), numpy.array(actuals)))
 end = datetime.now()
 print 'Time: ' + str(end - start)
