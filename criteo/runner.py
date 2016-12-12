@@ -89,9 +89,10 @@ def run_core(model):
                     print '{}: predicting done {}%'.format(filename, done)
                     curr_done = done
                 model.push_instance(vw_process_line(item, predict=True))
-    return model.read_predictions()
+    return None
 
-preds = sum(run(vw_models, run_core), [])
+run(vw_models, run_core)
+preds = sum([model.read_predictions() for model in vw_models], [])
 transformed_preds = map(lambda p: (p + 1) / 2.0, preds)
 end = datetime.now()
 ids = range(60000000, 66042135)
@@ -107,3 +108,5 @@ print('Num Predicted: ' + str(len(preds)))
 print('Elapsted model time: ' + str(end - start))
 print('Model speed: ' + str((end - start).total_seconds() * 1000 / float(len(preds))) + ' ms/row')
 print('Elapsted file write time: ' + str(writing_done - end))
+import pdb
+pdb.set_trace()
