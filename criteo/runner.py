@@ -21,11 +21,10 @@ parser.add_argument('--cores')
 cores = int(parser.parse_args().cores)
 
 vw_models = logistic_regression(name='Criteo',
-                                passes=80,
-                                l1=0.00000001,
-                                l2=0.00000001,
-                                cores=cores,
-                                debug_rate=100000)
+                                passes=40,
+                                l1=0.000001,
+                                l2=0.000001,
+                                cores=cores)
 split_file('train.txt', cores)
 split_file('test.txt', cores)
 
@@ -89,66 +88,21 @@ def run_core(model):
                 if done - curr_done > 1:
                     print '{}: done {}%'.format(filename, done)
                     curr_done = done
-                item = vw_process_line(item)
-                actuals.append(item['label'])
-                model.push_instance(item)
-    return zip(model.read_predictions(), actuals)
+                model.push_instance(vw_process_line(item, predict=True))
+    return model.read_predictions()
 
-all_results = sum(run(vw_models, run_core), [])
-
-no_results = filter(lambda x: x[1] == -1, all_results)
-yes_results = filter(lambda x: x[1] == 1, all_results)
-
-def log_loss(results):
-     predicted = [min([max([x, 1e-15]), 1-1e-15]) for x in map(lambda x: float(x[0]), results)]
-     target = [min([max([x, 1e-15]), 1-1e-15]) for x in map(lambda x: float(x[1]), results)]
-     return -(1.0 / len(target)) * sum([target[i] * log(predicted[i]) + (1.0 - target[i]) * log(1.0 - predicted[i]) for i in xrange(len(target))])
-
-def rmse(results):
-    return (sum(map(lambda x: (x[1] - x[0]) ** 2, results)) / len(results)) ** 0.5
-
-def percent_correct(results):
-    mean_pred = max(sum(map(lambda x: x[0], results)) / len(results), -0.99999)
-    return sum(map(lambda x: x[1] == (-1 if x[0] < mean_pred else 1), results)) / float(len(results)) * 100
-
-mean_pred = max(sum(map(lambda x: x[0], all_results)) / len(all_results), -0.99999)
-true_positives = sum(map(lambda x: x[0] >= mean_pred, filter(lambda x: x[1] == 1, all_results)))
-true_negatives = sum(map(lambda x: x[0] < mean_pred, filter(lambda x: x[1] == -1, all_results)))
-false_positives = sum(map(lambda x: x[0] >= mean_pred, filter(lambda x: x[1] == -1, all_results)))
-false_negatives = sum(map(lambda x: x[0] < mean_pred, filter(lambda x: x[1] == 1, all_results)))
-precision = true_positives / max(float((true_positives + false_positives)), 1.0)
-recall = true_positives / max(float((true_positives + false_negatives)), 1.0)
-
-print('Num Predicted: ' + str(len(all_results)))
-print('Num Actual No: ' + str(len(no_results)))
-print('Num Predicted No: ' + str(false_negatives + true_negatives))
-print('Num Actual Yes: ' + str(len(yes_results)))
-print('Num Predicted Yes: ' + str(false_positives + true_positives))
-print('Mean Pred: ' + str(mean_pred))
-print('Actual Yes/Yes + No: ' + str((true_positives + false_negatives) / float(false_positives + true_positives + false_negatives + true_negatives) * 100) + '%')
-print('Predicted Yes/Yes + No: ' + str((false_positives + true_positives) / float(false_positives + true_positives + false_negatives + true_negatives) * 100) + '%')
-print('Overall RMSE: ' + str(rmse(all_results)))
-print('No RMSE: ' + str(rmse(no_results)))
-print('Yes RMSE: ' + str(rmse(yes_results)))
-print('Overall LL: ' + str(log_loss(all_results)))
-print('No LL: ' + str(log_loss(no_results)))
-print('Yes LL: ' + str(log_loss(yes_results)))
-print('Overall % correct: ' + str(percent_correct(all_results)) + '%')
-print('No % correct: ' + str(percent_correct(no_results)) + '%')
-print('Yes % correct: ' + str(percent_correct(yes_results)) + '%')
-print('True Positives: ' + str(true_positives))
-print('True Negatives: ' + str(true_negatives))
-print('False Positives: ' + str(false_positives))
-print('False Negatives: ' + str(false_negatives))
-print('FP + 100FN / N: ' + str((false_positives + 100 * false_negatives) / float(len(all_results))))
-print('Precision: ' + str(precision * 100) + '%')
-print('Recall: ' + str(recall * 100) + '%')
-print('F: ' + str(2 * ((precision * recall) / max(precision + recall, 0.000001))))
-print('MCC: ' + str(((true_positives * true_negatives) - (false_positives * false_negatives)) / sqrt(float(max((true_positives + false_positives) * (true_positives + false_negatives) * (true_negatives + false_positives) * (true_negatives + false_negatives), 1.0)))))
-print('AAcc: ' + str(0.5 * ((true_positives / float(true_positives + false_negatives)) + (true_negatives / float(true_negatives + false_positives)))))
-
+preds = sum(run(vw_models, run_core), [])
+transformed_preds = map(lambda p: (p + 1) / 2.0, preds)
 end = datetime.now()
-print('Elapsted time: ' + str(end - start))
-print('Speed: ' + str((end - start).total_seconds() * 1000 / float(len(all_results))) + ' ms/row')
-import pdb
-pdb.set_trace()
+ids = range(60000000, 66042134)
+submission = zip(ids, transformed_preds)
+submission_file = open('kaggle_criteo_submission.txt', 'w')
+submission_file.write('Id,Predicted\n')
+for line in submission:
+    submission_file.write(str(line[0]) + ',' + str(line[1]) + '\n')
+writing_done = datetime.now()
+
+print('Num Predicted: ' + str(len(preds)))
+print('Elapsted model time: ' + str(end - start))
+print('Model speed: ' + str((end - start).total_seconds() * 1000 / float(len(preds))) + ' ms/row')
+print('Elapsted file write time: ' + str(writing_done - end))
