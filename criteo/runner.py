@@ -69,7 +69,7 @@ def run_core(model):
                 i += 1
                 done = int(i / float(num_lines) * 100)
                 if done - curr_done > 1:
-                    print '{}: done {}%'.format(filename, done)
+                    print '{}: training done {}%'.format(filename, done)
                     curr_done = done
                 model.push_instance(vw_process_line(item))
     filename = 'test.txt' + (str(core) if core >= 10 else '0' + str(core))
@@ -86,7 +86,7 @@ def run_core(model):
                 i += 1
                 done = int(i / float(num_lines) * 100)
                 if done - curr_done > 1:
-                    print '{}: done {}%'.format(filename, done)
+                    print '{}: predicting done {}%'.format(filename, done)
                     curr_done = done
                 model.push_instance(vw_process_line(item, predict=True))
     return model.read_predictions()
@@ -94,7 +94,7 @@ def run_core(model):
 preds = sum(run(vw_models, run_core), [])
 transformed_preds = map(lambda p: (p + 1) / 2.0, preds)
 end = datetime.now()
-ids = range(60000000, 66042134)
+ids = range(60000000, 66042135)
 submission = zip(ids, transformed_preds)
 submission_file = open('kaggle_criteo_submission.txt', 'w')
 submission_file.write('Id,Predicted\n')
