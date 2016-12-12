@@ -11,7 +11,7 @@ start = datetime.now()
 print('...Starting at ' + str(start))
 
 print("Cleaning up...")
-targets = ['Criteo*', 'train.txt0*', 'test.txt0*', 'train2.*', 'train3.*', 'test2*']
+targets = ['Criteo*', 'train.txt0*', 'test.txt0*', 'train.txt1*', 'test.txt1*']
 [safe_remove(target) for target in targets]
 
 print("Setting up...")
@@ -57,7 +57,7 @@ def vw_process_line(item, predict=False):
 
 def run_core(model):
     core = 0 if model.node is None else model.node
-    filename = 'train3.txt' + (str(core) if core >= 10 else '0' + str(core))
+    filename = 'train.txt' + (str(core) if core >= 10 else '0' + str(core))
     num_lines = sum(1 for line in open(filename))
     with model.training():
         with open(filename, 'r') as filehandle:
@@ -73,7 +73,7 @@ def run_core(model):
                     print '{}: done {}%'.format(filename, done)
                     curr_done = done
                 model.push_instance(vw_process_line(item))
-    filename = 'test2.txt' + (str(core) if core >= 10 else '0' + str(core))
+    filename = 'test.txt' + (str(core) if core >= 10 else '0' + str(core))
     num_lines = sum(1 for line in open(filename))
     actuals = []
     with model.predicting():
