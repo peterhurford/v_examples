@@ -3,7 +3,7 @@
 ## Libraries
 from datetime import datetime
 start = datetime.now()
-from vowpal_platypus import linear_regression
+from vowpal_platypus import linear_regression, safe_remove
 from sklearn import metrics
 from math import ceil, floor
 import re
@@ -15,7 +15,7 @@ vw_model = linear_regression(name='Titanic', passes=40,
                              quadratic='ff',
                              l1=0.0000001, l2=0.0000001)
 
-filename = '../data/titanic.csv'
+filename = 'titanic/data/titanic.csv'
 num_lines = sum(1 for line in open(filename)) - 1
 train = int(ceil(num_lines * 0.8))
 test = int(floor(num_lines * 0.2))
@@ -82,8 +82,17 @@ actuals = map(lambda x: x[1], all_results)
 # for col in titanic.columns[titanic.isnull().any(axis = 0)]:
 #   titanic[col] = impute(titanic[col])
 
+print('Cleaning...')
+[safe_remove(filename) for filename in ['Titanic.*', '*.dat']]
+
 d_preds = map(lambda x: -1 if x < 0.0 else 1, preds)
-print 'ROC: ' + str(metrics.roc_auc_score(numpy.array(d_preds), numpy.array(actuals)))
+auc = 'AUC: ' + str(metrics.roc_auc_score(numpy.array(d_preds), numpy.array(actuals)))
+time = 'Time: ' + str((datetime.now() - start).total_seconds()) + ' sec'
+with open('test_results.txt', 'a') as test_file:
+    for line in ['\n', 'TITANIC IN PYTHON VP\n', str(datetime.now()) + '\n', auc + '\n', time + '\n']:
+        test_file.write(line)
+print(auc)
+print(time)
 end = datetime.now()
 print 'Time: ' + str(end - start)
 

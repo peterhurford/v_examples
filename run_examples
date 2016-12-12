@@ -1,0 +1,14 @@
+#!/bin/bash
+
+rm test_results.txt
+Rscript titanic/R/titanic.R > /dev/null
+python titanic/python/titanic.py > /dev/null
+python titanic/vp/titanic.py > /dev/null
+
+echo "" >> test_results.txt
+echo "TITANIC IN BASH VW" >> test_results.txt
+date >> test_results.txt
+(time titanic/vw/titanic.vw) >> lol 2>> lol
+tail -n 5 lol | grep "AUC" >> test_results.txt
+tail -n 5 lol | grep "real" | awk '{print $2}' >> test_results.txt
+rm lol

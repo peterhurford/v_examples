@@ -100,6 +100,7 @@ submission_file = open('kaggle_criteo_submission.txt', 'w')
 submission_file.write('Id,Predicted\n')
 for line in submission:
     submission_file.write(str(line[0]) + ',' + str(line[1]) + '\n')
+os.system('zip kaggle_criteo_submission.zip kaggle_criteo_submission.txt')
 writing_done = datetime.now()
 
 print('Num Predicted: ' + str(len(preds)))
