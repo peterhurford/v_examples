@@ -1,4 +1,4 @@
-from vowpal_porpoise import run, logistic_regression, safe_remove, load_file, split_file
+from vowpal_platypus import run, logistic_regression, safe_remove, load_file, split_file
 import argparse
 import re
 import os
@@ -18,9 +18,7 @@ print("Setting up...")
 start = datetime.now()
 parser = argparse.ArgumentParser()
 parser.add_argument('--cores')
-parser.add_argument('--model')
 cores = int(parser.parse_args().cores)
-model = parser.parse_args().model
 
 vw_models = logistic_regression(name='Criteo',
                                 passes=80,
@@ -28,11 +26,8 @@ vw_models = logistic_regression(name='Criteo',
                                 l2=0.00000001,
                                 cores=cores,
                                 debug_rate=100000)
-os.system('head -n 1000000 train.txt > train2.txt')
-os.system('tail -n 100000 train2.txt > test2.txt')
-os.system('tail -n 1100000 train2.txt > train3.txt')
-split_file('train3.txt', cores)
-split_file('test2.txt', cores)
+split_file('train.txt', cores)
+split_file('test.txt', cores)
 
 
 def vw_process_line(item, predict=False):
@@ -60,58 +55,28 @@ def vw_process_line(item, predict=False):
         items['label'] = -1 if int(label) == 0 else 1
     return items
 
-if model == 'logistic':
-    def run_core(model):
-        core = 0 if model.node is None else model.node
-        filename = 'train3.txt' + (str(core) if core >= 10 else '0' + str(core))
-        num_lines = sum(1 for line in open(filename))
-        with model.training():
-            with open(filename, 'r') as filehandle:
-                i = 0
-                curr_done = 0
-                while True:
-                    item = filehandle.readline()
-                    if not item:
-                        break
-                    i += 1
-                    done = int(i / float(num_lines) * 100)
-                    if done - curr_done > 1:
-                        print '{}: done {}%'.format(filename, done)
-                        curr_done = done
-                    model.push_instance(vw_process_line(item))
-        filename = 'test2.txt' + (str(core) if core >= 10 else '0' + str(core))
-        num_lines = sum(1 for line in open(filename))
-        actuals = []
-        with model.predicting():
-            with open(filename, 'r') as filehandle:
-                i = 0
-                curr_done = 0
-                while True:
-                    item = filehandle.readline()
-                    if not item:
-                        break
-                    i += 1
-                    done = int(i / float(num_lines) * 100)
-                    if done - curr_done > 1:
-                        print '{}: done {}%'.format(filename, done)
-                        curr_done = done
-                    item = vw_process_line(item)
-                    actuals.append(item['label'])
-                    model.push_instance(item)
-        return zip(model.read_predictions(), actuals)
-else:
-    if model == 'random':
-        get_pred = lambda: -1 if randint(0, 1) == 0 else 1
-    elif model == 'no':
-        get_pred = lambda: -1
-    elif model == 'yes':
-        get_pred = lambda: 1
-
-    def run_core(model):
-        core = 0 if model.node is None else model.node
-        filename = 'train3.txt' + (str(core) if core >= 10 else '0' + str(core))
-        num_lines = sum(1 for line in open(filename))
-        actuals = []
+def run_core(model):
+    core = 0 if model.node is None else model.node
+    filename = 'train3.txt' + (str(core) if core >= 10 else '0' + str(core))
+    num_lines = sum(1 for line in open(filename))
+    with model.training():
+        with open(filename, 'r') as filehandle:
+            i = 0
+            curr_done = 0
+            while True:
+                item = filehandle.readline()
+                if not item:
+                    break
+                i += 1
+                done = int(i / float(num_lines) * 100)
+                if done - curr_done > 1:
+                    print '{}: done {}%'.format(filename, done)
+                    curr_done = done
+                model.push_instance(vw_process_line(item))
+    filename = 'test2.txt' + (str(core) if core >= 10 else '0' + str(core))
+    num_lines = sum(1 for line in open(filename))
+    actuals = []
+    with model.predicting():
         with open(filename, 'r') as filehandle:
             i = 0
             curr_done = 0
@@ -125,14 +90,14 @@ else:
                     print '{}: done {}%'.format(filename, done)
                     curr_done = done
                 item = vw_process_line(item)
-                actuals.append([get_pred(), item['label']])
-        return actuals
+                actuals.append(item['label'])
+                model.push_instance(item)
+    return zip(model.read_predictions(), actuals)
 
 all_results = sum(run(vw_models, run_core), [])
 
 no_results = filter(lambda x: x[1] == -1, all_results)
 yes_results = filter(lambda x: x[1] == 1, all_results)
-
 
 def log_loss(results):
      predicted = [min([max([x, 1e-15]), 1-1e-15]) for x in map(lambda x: float(x[0]), results)]

@@ -72,9 +72,9 @@ print(ssh_client.run('sudo mkfs.xfs -q /dev/xvdx'))
 print(ssh_client.run('sudo mount -o "defaults,noatime,nodiratime" /dev/xvdx /vol'))
 print(ssh_client.run('sudo chmod 777 /vol'))
 
-print("Uploading ml-20m...")
-scp(key_path, instance.dns_name, source='display.zip', target='/vol/display.zip')
-print(ssh_client.run('unzip /vol/display.zip'))
+print("Uploading Criteo data...")
+print(ssh_client.run('wget https://s3-eu-west-1.amazonaws.com/criteo-labs/dac.tar.gz'))
+print(ssh_client.run('tar -xvzf dac.tar.gz'))
 import pdb
 pdb.set_trace()
 conn.terminate_instances(instance.id)
