@@ -1,14 +1,38 @@
 #!/bin/bash
 
 rm test_results.txt
+echo "Titanic R XGB!"
 Rscript titanic/R/titanic.R > /dev/null
+echo "Titanic Python XGB!"
 python titanic/python/titanic.py > /dev/null
+echo "Titanic VP!"
 python titanic/vp/titanic.py > /dev/null
 
+echo "Titanic VW!"
 echo "" >> test_results.txt
 echo "TITANIC IN BASH VW" >> test_results.txt
 date >> test_results.txt
+echo "" > lol
 (time titanic/vw/titanic.vw) >> lol 2>> lol
-tail -n 5 lol | grep "AUC" >> test_results.txt
-tail -n 5 lol | grep "real" | awk '{print $2}' >> test_results.txt
+tail lol | grep "AUC" >> test_results.txt
+vw_time=$(tail lol | grep "real" | awk '{printf $2}' | sed 's/0m//' | sed 's/s//')
+echo "Time: $vw_time sec" >> test_results.txt
+row_count=$(wc -l 'titanic/data/titanic.csv' | awk {'printf $1'})
+speed=$(echo "$vw_time * 1000000 / $row_count" | bc -l)
+echo "Speed: $speed mcs/row" >> test_results.txt
 rm lol
+
+echo "Movielens (Bash) VW!"
+echo "" >> test_results.txt
+echo "MOVIELENS ALS IN BASH VW" >> test_results.txt
+date >> test_results.txt
+(time als/bash/multicore_1m.sh --cores 3) >> lol 2>> lol
+tail lol | grep "RMSE" >> test_results.txt
+vw_time=$(tail lol | grep "real" | awk '{printf $2}' | sed 's/0m//' | sed 's/s//')
+echo "Time: $vw_time sec" >> test_results.txt
+speed=$(echo "$vw_time * 1000000 / 1000000" | bc -l)
+echo "Speed: $speed mcs/row" >> test_results.txt
+rm lol
+
+echo "Movielens JuliaVW!"
+julia als/julia/runner.jl

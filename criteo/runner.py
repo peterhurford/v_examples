@@ -11,8 +11,7 @@ start = datetime.now()
 print('...Starting at ' + str(start))
 
 print("Cleaning up...")
-targets = ['Criteo*', 'train.txt0*', 'test.txt0*', 'train.txt1*', 'test.txt1*']
-[safe_remove(target) for target in targets]
+os.system("rm Criteo*")
 
 print("Setting up...")
 start = datetime.now()
@@ -31,11 +30,11 @@ split_file('test.txt', cores)
 
 def vw_process_line(item, predict=False):
     # Split tab separated file
+    item = item.replace('\n', '')
     item = item.split('\t')
     if not predict:
         label = item.pop(0)
-    
-    interval_items = filter(lambda x: x.isdigit(), item[1:])
+    interval_items = filter(lambda x: x.isdigit(), item)
     # Identify empty interval items
     interval_items = map(lambda x: None if x == '' else int(x), interval_items)
     # Set name and values for interval items
@@ -43,7 +42,7 @@ def vw_process_line(item, predict=False):
     # Handle empty interval items
     interval_items = dict([(k, v) for (k, v) in interval_items.iteritems() if v])
 
-    categorical_items = filter(lambda x: not x.isdigit(), item[1:])
+    categorical_items = filter(lambda x: not x.isdigit(), item)
     # Handle empty categorical values
     categorical_items = filter(lambda x: x != '', categorical_items)
     items = {
@@ -74,7 +73,6 @@ def run_core(model):
                 model.push_instance(vw_process_line(item))
     filename = 'test.txt' + (str(core) if core >= 10 else '0' + str(core))
     num_lines = sum(1 for line in open(filename))
-    actuals = []
     with model.predicting():
         with open(filename, 'r') as filehandle:
             i = 0
@@ -92,9 +90,15 @@ def run_core(model):
     return None
 
 run(vw_models, run_core)
-preds = sum([model.read_predictions() for model in vw_models], [])
-transformed_preds = map(lambda p: (p + 1) / 2.0, preds)
+os.system('cat Criteo*prediction* > all_predictions.dat')
+pred_file = open('all_predictions.dat', 'r')
+preds = pred_file.readlines()
+transformed_preds = map(lambda p: (p + 1) / 2.0, map(lambda p: float(p.replace('\n', '')), preds))
 end = datetime.now()
+print('Num Predicted: ' + str(len(preds)))
+print('Elapsted model time: ' + str(end - start))
+print('Model speed: ' + str((end - start).total_seconds() * 1000000 / float(len(preds))) + ' mcs/row')
+
 ids = range(60000000, 66042135)
 submission = zip(ids, transformed_preds)
 submission_file = open('kaggle_criteo_submission.txt', 'w')
@@ -104,9 +108,4 @@ for line in submission:
 os.system('zip kaggle_criteo_submission.zip kaggle_criteo_submission.txt')
 writing_done = datetime.now()
 
-print('Num Predicted: ' + str(len(preds)))
-print('Elapsted model time: ' + str(end - start))
-print('Model speed: ' + str((end - start).total_seconds() * 1000 / float(len(preds))) + ' ms/row')
 print('Elapsted file write time: ' + str(writing_done - end))
-import pdb
-pdb.set_trace()

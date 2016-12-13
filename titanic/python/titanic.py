@@ -65,7 +65,7 @@ dep_var_validation = dep_var_train[is_validation_data]
 dep_var_train = dep_var_train[[not x for x in is_validation_data]]
 
 #### Turn data into matrix for XGB
-params = {'eta': 1, 'max_depth': 2, 'nthread': 2, 'objective': 'binary:logistic'}
+params = {'eta': 1, 'max_depth': 2, 'nthread': 2, 'objective': 'binary:logistic', 'silent': True}
 
 def train(titanic_train, titanic_validation, titanic_test, params):
   titanic_train = xgboost.DMatrix(titanic_train, label = dep_var_train)
@@ -79,16 +79,20 @@ model = train(titanic_train, titanic_validation, titanic_test, params)
 ## Get Test AUC
 def predict(titanic_test, dep_var_test):
   titanic_test = xgboost.DMatrix(titanic_test, label = dep_var_test)
-  preds = model.predict(titanic_test)
-  return metrics.roc_auc_score(numpy.array(dep_var_test), preds)
+  return model.predict(titanic_test)
 
-auc = 'AUC: ' + str(predict(titanic_test, dep_var_test))
-time = 'Time: ' + str((datetime.now() - start).total_seconds()) + ' sec'
+preds = predict(titanic_test, dep_var_test)
+auc = 'AUC: ' + str(metrics.roc_auc_score(numpy.array(dep_var_test), preds))
+end = datetime.now()
+time = 'Time: ' + str((end - start).total_seconds()) + ' sec'
+num_lines = sum(1 for line in open('titanic/data/titanic.csv', 'r'))
+speed = 'Speed: ' + str((end - start).total_seconds() * 1000000 / float(num_lines)) + ' mcs/row'
 with open('test_results.txt', 'a') as test_file:
-    for line in ['\n', 'TITANIC IN PYTHON XGB\n', str(datetime.now()) + '\n', auc + '\n', time + '\n']:
+    for line in ['\n', 'TITANIC IN PYTHON XGB\n', str(datetime.now()) + '\n', auc + '\n', time + '\n', speed + '\n']:
         test_file.write(line)
 print(auc)
 print(time)
+print(speed)
 
 # AUC: 0.810606060606
 # Time: 0:00:00.675874
