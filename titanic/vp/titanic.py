@@ -96,8 +96,7 @@ with open('test_results.txt', 'a') as test_file:
         test_file.write(line)
 print(auc)
 print(time)
-end = datetime.now()
-print 'Time: ' + str(end - start)
+print(speed)
 
 # AUC: 0.845297029703
 # Time: 0:00:00.520540

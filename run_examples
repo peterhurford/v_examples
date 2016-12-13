@@ -26,7 +26,7 @@ echo "Movielens (Bash) VW!"
 echo "" >> test_results.txt
 echo "MOVIELENS ALS IN BASH VW" >> test_results.txt
 date >> test_results.txt
-(time als/bash/multicore_1m.sh --cores 3) >> lol 2>> lol
+(time als/bash/multicore_1m.sh --cores 4) >> lol 2>> lol
 tail lol | grep "RMSE" >> test_results.txt
 vw_time=$(tail lol | grep "real" | awk '{printf $2}' | sed 's/0m//' | sed 's/s//')
 echo "Time: $vw_time sec" >> test_results.txt
@@ -36,3 +36,9 @@ rm lol
 
 echo "Movielens JuliaVW!"
 julia als/julia/runner.jl
+
+echo "MovieLens PySpark!"
+spark-submit --master local[*] --driver-memory 6G als/pyspark/runner.py --partitions 16 > /dev/null
+
+echo "MovieLens VP!"
+python als/vp/runner.py --cores 4 > /dev/null
