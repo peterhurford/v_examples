@@ -22,6 +22,9 @@ speed=$(echo "$vw_time * 1000000 / $row_count" | bc -l)
 echo "Speed: $speed mcs/row" >> test_results.txt
 rm lol
 
+echo "MovieLens VP!"
+python als/vp/runner.py --cores 4 > /dev/null
+
 echo "Movielens (Bash) VW!"
 echo "" >> test_results.txt
 echo "MOVIELENS ALS IN BASH VW" >> test_results.txt
@@ -39,6 +42,3 @@ julia als/julia/runner.jl
 
 echo "MovieLens PySpark!"
 spark-submit --master local[*] --driver-memory 6G als/pyspark/runner.py --partitions 16 > /dev/null
-
-echo "MovieLens VP!"
-python als/vp/runner.py --cores 4 > /dev/null

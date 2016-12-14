@@ -59,7 +59,7 @@ os.system('tail -n {} als/data/ratings.dat > als/data/ratings_test.dat'.format(t
 split_file('als/data/ratings_train.dat', cores)
 split_file('als/data/ratings_test.dat', cores)
 def run_core(model):
-    core = 0 if model.node is None else model.node
+    core = 0 if model.params.get('node') is None else model.params['node']
     filename = 'als/data/ratings_train.dat' + (str(core) if core >= 10 else '0' + str(core))
     ratings = compile_ratings(filename)
     with model.training():

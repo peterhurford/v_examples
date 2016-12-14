@@ -9,17 +9,27 @@ from math import ceil, floor
 import re
 import os
 import numpy
+import argparse
 
 # Setup
-vw_model = linear_regression(name='Titanic', passes=40,
-                             quadratic='ff',
-                             l1=0.0000001, l2=0.0000001)
+parser = argparse.ArgumentParser()
+parser.add_argument('--hypersearch', action='store_true', default=False)
+hypersearch = parser.parse_args().hypersearch
+
+if hypersearch:
+    vw_model = linear_regression(name='Titanic', passes=[1, 50],
+                                 quadratic='ff',
+                                 l1=[0.00000001, 0.001], l2=[0.00000001, 0.01])
+else:
+    vw_model = linear_regression(name='Titanic', passes=2,
+                                 quadratic='ff',
+                                 l1=0, l2=0.01)
 
 filename = 'titanic/data/titanic.csv'
 num_lines = sum(1 for line in open(filename)) - 1
 train = int(ceil(num_lines * 0.8))
 test = int(floor(num_lines * 0.2))
-os.system('head -n {} {} > titanic.dat'.format(num_lines, filename))
+os.system('tail -n {} {} > titanic.dat'.format(num_lines, filename))
 os.system('head -n {} titanic.dat > titanic_train.dat'.format(train))
 os.system('tail -n {} titanic.dat > titanic_test.dat'.format(test))
 
@@ -48,45 +58,21 @@ def process_line(item):
         'f': features
     }
 
-with vw_model.training():
-    with open('titanic_train.dat', 'r') as filehandle:
-        filehandle.readline() # Throwaway header
-        while True:
-            item = filehandle.readline()
-            if not item:
-                break
-            vw_model.push_instance(process_line(item))
-with vw_model.predicting():
-    actuals = []
-    with open('titanic_test.dat', 'r') as filehandle:
-        filehandle.readline() # Throwaway header
-        while True:
-            item = filehandle.readline()
-            if not item:
-                break
-            item = process_line(item)
-            actuals.append(item['label'])
-            vw_model.push_instance(item)
-all_results = zip(vw_model.read_predictions(), actuals)
-preds = map(lambda x: x[0], all_results)
-actuals = map(lambda x: x[1], all_results)
+def auc(results):
+    preds = map(lambda x: -1 if x < 0.0 else 1, map(lambda x: x[0], results))
+    actuals = map(lambda x: x[1], results)
+    return metrics.roc_auc_score(numpy.array(preds), numpy.array(actuals))
 
-## TODO: Impute NAs with Median
-# def impute(col):
-#   if col.apply(numpy.isreal).all(axis = 0):
-#     value = numpy.nanmedian(col)
-#   else:
-#     value = col.mode().iloc[0]
-#   return col.fillna(value)
-
-# for col in titanic.columns[titanic.isnull().any(axis = 0)]:
-#   titanic[col] = impute(titanic[col])
+all_results = (vw_model
+               .train_on('titanic_train.dat',
+                         line_function=process_line,
+                         evaluate_function=auc)
+               .predict_on('titanic_test.dat'))
 
 print('Cleaning...')
 [safe_remove(filename) for filename in ['Titanic.*', '*.dat']]
 
-d_preds = map(lambda x: -1 if x < 0.0 else 1, preds)
-auc = 'AUC: ' + str(metrics.roc_auc_score(numpy.array(d_preds), numpy.array(actuals)))
+auc = 'AUC: ' + str(auc(all_results))
 end = datetime.now()
 time = 'Time: ' + str((end - start).total_seconds()) + ' sec'
 num_lines = sum(1 for line in open('titanic/data/titanic.csv', 'r'))
