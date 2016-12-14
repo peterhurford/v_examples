@@ -54,7 +54,7 @@ def vw_process_line(item, predict=False):
     return items
 
 def run_core(model):
-    core = 0 if model.node is None else model.node
+    core = 0 if model.params.get('node') is None else model.params['node']
     filename = 'train.txt' + (str(core) if core >= 10 else '0' + str(core))
     num_lines = sum(1 for line in open(filename))
     with model.training():
