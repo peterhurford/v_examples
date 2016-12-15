@@ -40,7 +40,7 @@ while !eof(test_ratings_file)
   test_ratings[user_id][movie_id] = rating
 end
 
-open(`vw --passes 10 -q ui --rank 10 --l2 0.01 --learning_rate 0.015 --decay_learning_rate 0.97 --power_t 0 -f als/data/movielens.reg --cache_file als/data/movielens.cache`, "w", STDOUT) do io
+open(`vw --passes 10 -b 21 -q ui --rank 10 --l2 0.01 --learning_rate 0.015 --decay_learning_rate 0.97 --power_t 0 -f als/data/movielens.reg --cache_file als/data/movielens.cache`, "w", STDOUT) do io
   for user_id in train_users
     for (movie_id, rating) in train_ratings[user_id]
       println(io, "$rating |u $user_id |i $movie_id")

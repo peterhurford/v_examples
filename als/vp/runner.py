@@ -14,7 +14,13 @@ print("Setting up...")
 start = datetime.now()
 parser = argparse.ArgumentParser()
 parser.add_argument('--cores')
+parser.add_argument('--num_ratings')
 cores = int(parser.parse_args().cores)
+num_ratings = parser.parse_args().num_ratings
+if num_ratings is None:
+    num_ratings = 1000000
+else:
+    num_ratings = int(num_ratings)
 
 def compile_rating(item):
     item = item.split('::')
@@ -26,20 +32,22 @@ def compile_rating(item):
 def rmse(results):
     return (sum(map(lambda x: (float(x[1]) - float(x[0])) ** 2, results)) / float(len(results))) ** 0.5
 
-results = run(als(name='ALS', passes=40, cores=cores,
+if num_ratings < 1000000:
+    os.system('head -n ' + str(num_ratings) + ' als/data/ratings.dat > als/data/ratings_.dat')
+else:
+    os.system('cp als/data/ratings.dat als/data/ratings_.dat')
+
+results = run(als(name='ALS', passes=10, cores=cores,
                   quadratic='cp', rank=10,
-                  l1=0.001, l2=0.001,
-                  learning_rate=0.015, decay_learning_rate=0.97, power_t=0),
-              'als/data/ratings.dat',
+                  l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0),
+              'als/data/ratings_.dat',
               line_function=compile_rating,
-              evaluate_function=rmse,
               header=False)
 
 rmse = 'RMSE: ' + str(rmse(results))
 end = datetime.now()
 time = 'Time: ' + str((end - start).total_seconds()) + ' sec'
-num_lines = sum(1 for line in open('als/data/ratings.dat', 'r'))
-speed = 'Speed: ' + str((end - start).total_seconds() * 1000000 / float(num_lines)) + ' mcs/row'
+speed = 'Speed: ' + str((end - start).total_seconds() * 1000000 / float(num_ratings)) + ' mcs/row'
 with open('test_results.txt', 'a') as test_file:
     for line in ['\n', 'MOVIELENS IN VP\n', str(datetime.now()) + '\n', rmse + '\n', time + '\n', speed + '\n']:
         test_file.write(line)

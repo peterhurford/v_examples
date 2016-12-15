@@ -1,4 +1,4 @@
-# Example usage: spark-submit --master local[*] --driver-memory 6G --packages com.databricks:spark-csv_2.11:1.5.0 runner.py --partitions 16
+# Example usage: spark-submit --master local[*] --driver-memory 6G --packages com.databricks:spark-csv_2.11:1.5.0 runner.py --partitions 16 --num_ratings 1000
 
 import logging
 import argparse
@@ -15,7 +15,13 @@ from pyspark.ml.evaluation import RegressionEvaluator
 start = datetime.now()
 parser = argparse.ArgumentParser()
 parser.add_argument('--partitions')
+parser.add_argument('--num_ratings')
 partitions = int(parser.parse_args().partitions)
+num_ratings = parser.parse_args().num_ratings
+if num_ratings is None:
+    num_ratings = 1000000
+else:
+    num_ratings = int(num_ratings)
 
 sc = SparkContext(appName='PySparkALSTest')
 sc.setLogLevel('ERROR')
@@ -24,8 +30,11 @@ sql_context = SQLContext(sc)
 print('Setting up, formatting for {} process partitions...'.format(partitions))
 sql_context.setConf('spark.sql.shuffle.partitions', str(partitions))
 
-num_rows = 10000
-os.system('head -n ' + str(num_rows) + ' als/data/ratings.dat > als/data/ratings_.dat')
+if num_ratings < 1000000:
+    os.system('head -n ' + str(num_ratings) + ' als/data/ratings.dat > als/data/ratings_.dat')
+else:
+    os.system('cp als/data/ratings.dat als/data/ratings_.dat')
+
 ratings = (sc.textFile('file://' + os.getcwd() + '/als/data/ratings_.dat')
            .repartition(partitions)
            .flatMap(lambda x: [y.split('::') for y in x.split('\n')])
@@ -58,7 +67,7 @@ os.system('rm als/data/ratings_.dat')
 done = datetime.now()
 time = "Time: " + str((done - start).total_seconds()) + ' sec'
 print(time)
-speed = "Speed: " + str((done - start).total_seconds() * 1000000 / float(num_rows)) + ' mcs per row'
+speed = "Speed: " + str((done - start).total_seconds() * 1000000 / float(num_ratings)) + ' mcs per row'
 print(speed)
 with open('test_results.txt', 'a') as test_file:
     for line in ['\n', 'MOVIELENS IN PYSPARK\n', str(datetime.now()) + '\n', rmse + '\n', time + '\n', speed + '\n']:
