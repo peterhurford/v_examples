@@ -3,7 +3,7 @@
 ## Libraries
 from datetime import datetime
 start = datetime.now()
-from vowpal_platypus import logistic_regression, safe_remove
+from vowpal_platypus import logistic_regression, safe_remove, run
 from sklearn import metrics
 from math import ceil, floor
 import re
@@ -55,9 +55,10 @@ def auc(results):
     actuals = map(lambda x: x[1], results)
     return metrics.roc_auc_score(numpy.array(preds), numpy.array(actuals))
 
-all_results = vw_model.run('titanic/data/titanic.csv',
-                           line_function=process_line,
-                           evaluate_function=auc)
+all_results = run(vw_model,
+                  'titanic/data/titanic.csv',
+                  line_function=process_line,
+                  evaluate_function=auc)
 safe_remove('Titanic.*')
 
 auc = 'AUC: ' + str(auc(all_results))
