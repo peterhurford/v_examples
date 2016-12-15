@@ -50,7 +50,7 @@ print(str(users.count()) + " users, " + str(ratings.count()) + " ratings, " + st
 
 print("Have faith...")
 model = ALS(rank=10, maxIter=10, userCol='user_id', itemCol='movie_id', ratingCol='rating')
-train, test = ratings.randomSplit([0.9, 0.1])
+train, test = ratings.randomSplit([0.8, 0.2])
 evaluate = model.fit(train).transform(test)
 se = (evaluate.withColumn('sqerror', (col('prediction') - col('rating')) ** 2)
       .select('sqerror')

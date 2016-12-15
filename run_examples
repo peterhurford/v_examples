@@ -45,4 +45,4 @@ echo "Movielens JuliaVW!"
 julia als/julia/runner.jl
 
 echo "MovieLens PySpark!"
-spark-submit --master local[*] --driver-memory 6G als/pyspark/runner.py --partitions 16 --num_ratings 10000 > /dev/null
+spark-submit --master local[4] --driver-memory 8G als/pyspark/runner.py --partitions 16 > /dev/null
