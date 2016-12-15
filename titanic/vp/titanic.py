@@ -3,7 +3,7 @@
 ## Libraries
 from datetime import datetime
 start = datetime.now()
-from vowpal_platypus import linear_regression, safe_remove
+from vowpal_platypus import logistic_regression, safe_remove
 from sklearn import metrics
 from math import ceil, floor
 import re
@@ -17,21 +17,13 @@ parser.add_argument('--hypersearch', action='store_true', default=False)
 hypersearch = parser.parse_args().hypersearch
 
 if hypersearch:
-    vw_model = linear_regression(name='Titanic', passes=[1, 50],
-                                 quadratic='ff',
-                                 l1=[0.00000001, 0.001], l2=[0.00000001, 0.01])
+    vw_model = logistic_regression(name='Titanic', passes=[1, 50],
+                                   quadratic='ff',
+                                   l1=[0.00000001, 0.001], l2=[0.00000001, 0.01])
 else:
-    vw_model = linear_regression(name='Titanic', passes=2,
-                                 quadratic='ff',
-                                 l1=0, l2=0.01)
-
-filename = 'titanic/data/titanic.csv'
-num_lines = sum(1 for line in open(filename)) - 1
-train = int(ceil(num_lines * 0.8))
-test = int(floor(num_lines * 0.2))
-os.system('tail -n {} {} > titanic.dat'.format(num_lines, filename))
-os.system('head -n {} titanic.dat > titanic_train.dat'.format(train))
-os.system('tail -n {} titanic.dat > titanic_test.dat'.format(test))
+    vw_model = logistic_regression(name='Titanic', passes=2,
+                                   quadratic='ff',
+                                   l1=0.0001, l2=0.01)
 
 def clean(s):
   return " ".join(re.findall(r'\w+', s,flags = re.UNICODE | re.LOCALE)).lower()
@@ -63,22 +55,19 @@ def auc(results):
     actuals = map(lambda x: x[1], results)
     return metrics.roc_auc_score(numpy.array(preds), numpy.array(actuals))
 
-all_results = (vw_model
-               .train_on('titanic_train.dat',
-                         line_function=process_line,
-                         evaluate_function=auc)
-               .predict_on('titanic_test.dat'))
-
-print('Cleaning...')
-[safe_remove(filename) for filename in ['Titanic.*', '*.dat']]
+all_results = vw_model.run('titanic/data/titanic.csv',
+                           line_function=process_line,
+                           evaluate_function=auc)
+safe_remove('Titanic.*')
 
 auc = 'AUC: ' + str(auc(all_results))
 end = datetime.now()
 time = 'Time: ' + str((end - start).total_seconds()) + ' sec'
 num_lines = sum(1 for line in open('titanic/data/titanic.csv', 'r'))
 speed = 'Speed: ' + str((end - start).total_seconds() * 1000000 / float(num_lines)) + ' mcs/row'
+title = 'TITANIC IN PYTHON VP (HYPERSEARCH)' if hypersearch else 'TITANIC IN PYTHON VP'
 with open('test_results.txt', 'a') as test_file:
-    for line in ['\n', 'TITANIC IN PYTHON VP\n', str(datetime.now()) + '\n', auc + '\n', time + '\n', speed + '\n']:
+    for line in ['\n', title + '\n', str(datetime.now()) + '\n', auc + '\n', time + '\n', speed + '\n']:
         test_file.write(line)
 print(auc)
 print(time)
