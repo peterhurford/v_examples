@@ -37,11 +37,10 @@ def process_line(item):
 
 # Train a logistic regression model on Titanic survival.
 # The `run` function will automatically generate a train - test split.
-run(logistic_regression(name='Titanic', # Gives a name to the model file.
-                        passes=40,      # How many online passes to do.
-                        quadratic='ff', # Generates automatic quadratic features.
-                        l1=0,           # L1 and L2 Regularization
-                        l2=0.01),
-    'titanic/data/titanic.csv',         # File with the data
-    line_function=process_line,         # Function to process each line of the file
-    evaluate_function=auc)              # Function to evaluate results
+run(logistic_regression(name='Titanic',    # Gives a name to the model file.
+                        passes=3,          # How many online passes to do.
+                        quadratic='ff',    # Generates automatic quadratic features.
+                        nn=5),             # Add a neural network layer with 5 hidden units.
+    'titanic/data/titanic.csv',     # File with the data (will automatically be split into random train and test)
+    line_function=process_line,     # Function to process each line of the file
+    evaluate_function=auc)          # Function to evaluate results

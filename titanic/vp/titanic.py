@@ -3,7 +3,7 @@
 ## Libraries
 from datetime import datetime
 start = datetime.now()
-from vowpal_platypus import logistic_regression, safe_remove, run
+from vowpal_platypus import logistic_regression, run
 from sklearn import metrics
 from math import ceil, floor
 import re
@@ -17,13 +17,12 @@ parser.add_argument('--hypersearch', action='store_true', default=False)
 hypersearch = parser.parse_args().hypersearch
 
 if hypersearch:
-    vw_model = logistic_regression(name='Titanic', passes=[1, 50],
+    vw_model = logistic_regression(name='Titanic', passes=[1, 5],
                                    quadratic='ff',
+                                   nn=[5, 10, 15, 20],
                                    l1=[0.00000001, 0.001], l2=[0.00000001, 0.01])
 else:
-    vw_model = logistic_regression(name='Titanic', passes=2,
-                                   quadratic='ff',
-                                   l1=0.0001, l2=0.01)
+    vw_model = logistic_regression(name='Titanic', passes=3, quadratic='ff', nn=5)
 
 def clean(s):
   return " ".join(re.findall(r'\w+', s,flags = re.UNICODE | re.LOCALE)).lower()
@@ -55,11 +54,11 @@ def auc(results):
     actuals = map(lambda x: x[1], results)
     return metrics.roc_auc_score(numpy.array(preds), numpy.array(actuals))
 
+evaluate_function = auc if hypersearch else None
 all_results = run(vw_model,
                   'titanic/data/titanic.csv',
                   line_function=process_line,
-                  evaluate_function=auc)
-safe_remove('Titanic.*')
+                  evaluate_function=evaluate_function)
 
 auc = 'AUC: ' + str(auc(all_results))
 end = datetime.now()
@@ -73,6 +72,3 @@ with open('test_results.txt', 'a') as test_file:
 print(auc)
 print(time)
 print(speed)
-
-# AUC: 0.845297029703
-# Time: 0:00:00.520540

@@ -43,6 +43,7 @@ results = run(als(name='ALS', passes=10, cores=cores,
               'als/data/ratings_.dat',
               line_function=compile_rating,
               header=False)
+safe_remove('als/data/ratings_.dat')
 
 rmse = 'RMSE: ' + str(rmse(results))
 end = datetime.now()
