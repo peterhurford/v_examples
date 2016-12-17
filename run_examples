@@ -29,6 +29,11 @@ rm lol
 echo "MovieLens VP!"
 python als/vp/runner.py --cores 4 > /dev/null
 
+echo "MovieLens VP (Hypersearch)!"
+python als/vp/runner.py --cores 4 --num_ratings 100000 --hypersearch > lol
+grep "Best value" lol >> test_results.txt
+rm lol
+
 echo "Movielens (Bash) VW!"
 echo "" >> test_results.txt
 echo "MOVIELENS ALS IN BASH VW" >> test_results.txt
