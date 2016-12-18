@@ -26,8 +26,8 @@ def log_loss(results):
     target = [min([max([x, 1e-15]), 1-1e-15]) for x in map(lambda x: float(x[1]), results)]
     return -(1.0 / len(target)) * sum([target[i] * log(predicted[i]) + (1.0 - target[i]) * log(1.0 - predicted[i]) for i in xrange(len(target))])
 
-model = logistic_regression(name='Numerai', passes=100, cores=cores,
-            quadratic='ff', nn=10, l1 = 0.0001, l2 = 0.00001)
+model = logistic_regression(name='Numerai', passes=500, cores=cores,
+            quadratic='ff', nn=5, l1 = 0.0001, l2 = 0.00001)
 
 if playground:  # For model tuning and such
     results = run(model,
@@ -50,5 +50,8 @@ tournament_file.readline()
 for pred in full_results:
     t_id = str(tournament_file.readline().split(',')[0])
     submission_file.write(t_id + ',' + str((pred + 1) / 2.0) + '\n')
+submission_file.flush()
 submission_file.close()
 print("Submission file written!")
+import pdb
+pdb.set_trace()
