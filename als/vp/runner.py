@@ -1,11 +1,7 @@
 from vowpal_platypus import run, als, safe_remove
 import argparse
-import re
 import os
-import json
-from random import randint
 from datetime import datetime
-from math import log, ceil, floor
 
 start = datetime.now()
 print('...Starting at ' + str(start))

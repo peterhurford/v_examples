@@ -23,6 +23,7 @@ vw_models = logistic_regression(name='Criteo',
                                 passes=40,
                                 l1=0.000001,
                                 l2=0.000001,
+                                debug=True,
                                 cores=cores)
 split_file('train.txt', cores)
 split_file('test.txt', cores)
