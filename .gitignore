@@ -1,4 +1,3 @@
-criteo/kaggle_criteo_submission.zip
-criteo/*.txt
+criteo/data/*
 numerai/data/*
 springleaf/*.csv
