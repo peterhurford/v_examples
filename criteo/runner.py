@@ -21,14 +21,12 @@ def process_line(item, predict=False):
         label = items.pop(0)
     interval_items = {}
     categorical_items = []
-    pos = 0
-    for item in items:
-        if item != '':
+    for pos, item in enumerate(items):
+        if item and item != '':
             if pos < 13:
                 interval_items['i' + str(pos)] = int(item)
             else:
                 categorical_items.append('c' + str(pos) + str(item))
-        pos += 1
     items = {
         'i': interval_items,
         'c': categorical_items
@@ -45,7 +43,7 @@ results = run(model,
               train_line_function=process_line,
               predict_filename='criteo/data/test.txt',
               predict_line_function=process_predict_line)
-transformed_preds = map(lambda p: (p + 1) / 2.0, map(lambda p: float(p.replace('\n', '')), results))
+transformed_preds = map(lambda p: (p + 1) / 2.0, map(lambda p: float(str(p).replace('\n', '')), results))
 end = datetime.now()
 print('Num Predicted: ' + str(len(transformed_preds)))
 print('Elapsted model time: ' + str(end - start))
