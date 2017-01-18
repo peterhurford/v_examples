@@ -12,7 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--cores')
 cores = int(parser.parse_args().cores)
 
-model = logistic_regression(name='Criteo', cores=cores)
+model = logistic_regression(name='Criteo', debug=True, debug_rate=500000, cores=cores)
 
 def process_line(item, predict=False):
     # Split tab separated file
