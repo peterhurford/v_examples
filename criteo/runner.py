@@ -20,14 +20,14 @@ def process_line(item, predict=False):
     if not predict:
         label = items.pop(0)
     interval_items = {}
-    categorical_items = {}
+    categorical_items = []
     pos = 0
     for item in items:
         if item != '':
             if pos < 13:
                 interval_items['i' + str(pos)] = int(item)
             else:
-                categorical_items['c' + str(pos)] = item
+                categorical_items.append('c' + str(pos) + str(item))
         pos += 1
     items = {
         'i': interval_items,
