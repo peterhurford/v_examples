@@ -42,7 +42,8 @@ results = run(model,
               train_filename='criteo/data/train.txt',
               train_line_function=process_line,
               predict_filename='criteo/data/test.txt',
-              predict_line_function=process_predict_line)
+              predict_line_function=process_predict_line,
+              header=False)
 transformed_preds = map(lambda p: (p + 1) / 2.0, map(lambda p: float(str(p).replace('\n', '')), results))
 end = datetime.now()
 print('Num Predicted: ' + str(len(transformed_preds)))
