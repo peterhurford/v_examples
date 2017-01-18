@@ -14,7 +14,7 @@ cores = int(parser.parse_args().cores)
 
 model = logistic_regression(name='Criteo', debug=True, cores=cores)
 
-def vw_process_line(item, predict=False):
+def process_line(item, predict=False):
     # Split tab separated file
     items = item.replace('\n', '').split('\t')
     if not predict:
@@ -37,11 +37,14 @@ def vw_process_line(item, predict=False):
         items['label'] = -1 if int(label) == 0 else 1
     return items
 
+def process_predict_line(item):
+    return process_line(item, predict=True)
+
 results = run(model,
               train_filename='criteo/data/train.txt',
-              train_line_function=lambda i: vw_process_line(i),
+              train_line_function=process_line,
               predict_filename='criteo/data/test.txt',
-              predict_line_function=lambda i: vw_process_line(i, predict=True))
+              predict_line_function=process_predict_line)
 transformed_preds = map(lambda p: (p + 1) / 2.0, map(lambda p: float(p.replace('\n', '')), results))
 end = datetime.now()
 print('Num Predicted: ' + str(len(transformed_preds)))
