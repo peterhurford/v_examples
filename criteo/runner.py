@@ -45,9 +45,9 @@ def vw_process_line(item, predict=False):
     return items
 
 results = run(model,
-              train_filename='criteo/train.txt',
+              train_filename='criteo/data/train.txt',
               train_line_function=lambda i: vw_process_line(i),
-              predict_filename='criteo/test.txt',
+              predict_filename='criteo/data/test.txt',
               predict_line_function=lambda i: vw_process_line(i, predict=True))
 transformed_preds = map(lambda p: (p + 1) / 2.0, map(lambda p: float(p.replace('\n', '')), results))
 end = datetime.now()
@@ -57,10 +57,10 @@ print('Model speed: ' + str((end - start).total_seconds() * 1000000 / float(len(
 
 ids = range(60000000, 66042135)
 submission = zip(ids, transformed_preds)
-submission_file = open('kaggle_criteo_submission.txt', 'w')
+submission_file = open('criteo/data/kaggle_criteo_submission.txt', 'w')
 submission_file.write('Id,Predicted\n')
 for line in submission:
     submission_file.write(str(line[0]) + ',' + str(line[1]) + '\n')
-os.system('zip kaggle_criteo_submission.zip kaggle_criteo_submission.txt')
+os.system('zip criteo/data/kaggle_criteo_submission.zip criteo/data/kaggle_criteo_submission.txt')
 writing_done = datetime.now()
 print('Elapsted file write time: ' + str(writing_done - end))

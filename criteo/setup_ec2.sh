@@ -16,3 +16,8 @@ cd cluster && sudo make install && cd ../..
 git clone https://github.com/peterhurford/vowpal_platypus.git && cd vowpal_platypus && git checkout 1.0.2
 sudo python setup.py install && cd ..
 sudo -H pip install retrying
+
+cd ~/vp_examples/criteo
+mkdir data; cd data
+wget https://s3-eu-west-1.amazonaws.com/criteo-labs/dac.tar.gz  # Accept terms at http://labs.criteo.com/downloads/2014-kaggle-display-advertising-challenge-dataset/
+tar -xvzf dac.tar.gz
