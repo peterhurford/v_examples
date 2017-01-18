@@ -1,91 +1,95 @@
-# Example usage: julia runner.py
 #TODO: This code is very slow...
 
-#TODO: Up limit to 1M, 20M
-run(pipeline(`head -n 10001 ratings.csv`, `tail -n +2`, "ratings_.csv"))
-ratings_file = open("ratings_.csv", "r")
+num_lines = 100000
+then = now()
+run(pipeline(`cat als/data/movies.dat`, `awk -F"::" '{printf "|i %d\n", $1}'`, "als/data/movies_t.dat"))
+run(pipeline(`head -n $num_lines als/data/ratings.dat`, `gshuf`, "als/data/ratings_s.dat"))
+ratings_count = parse(Int, split(readstring(`wc -l als/data/ratings_s.dat`))[1])
+train_count = convert(Int, floor(ratings_count * 0.8))
+run(`gsplit -d -l $train_count als/data/ratings_s.dat`)
+run(`mv x00 als/data/ratings_train.dat`)
+run(`mv x01 als/data/ratings_test.dat`)
+run(pipeline(`cat als/data/ratings_train.dat`, `awk -F"::" '{printf "%d |u %d |i %d\n", $3, $1, $2}'`, "als/data/ratings_train_t.dat"))
+run(pipeline(`cat als/data/ratings_test.dat`, `awk -F"::" '{printf "%d |u %d |i %d\n", $3, $1, $2}'`, "als/data/ratings_test_t.dat"))
+run(pipeline(`cat als/data/ratings_train_t.dat`, `awk '{print $3}'`, `uniq`, `awk '{printf "|u %d\n", $1}'`, "als/data/users_t_train.dat"))
+run(pipeline(`cat als/data/ratings_test_t.dat`, `awk '{print $3}'`, `uniq`, `awk '{printf "|u %d\n", $1}'`, "als/data/users_t_test.dat"))
+train_ratings_file = open("als/data/ratings_train.dat", "r")
+test_ratings_file = open("als/data/ratings_test.dat", "r")
 
-run(pipeline(`tail -n +2 ratings_.csv`, `awk -F\",\" '{print $1}'`, `uniq`, "users.csv"))
-@everywhere movie_ids = readcsv("movies.csv")[2:end,1]
-@everywhere user_ids = readcsv("users.csv")[2:end,1]
-
-ratings = Dict()
-while !eof(ratings_file)
-  line = readline(ratings_file)
-  user_id, movie_id, rating = split(line, ",")
-  if !haskey(ratings, user_id)
-    ratings[user_id] = Dict()
+train_users = []
+train_ratings = Dict()
+while !eof(train_ratings_file)
+  line = readline(train_ratings_file)
+  user_id, movie_id, rating, timestamp = split(line, "::")
+  if !haskey(train_ratings, user_id)
+    train_ratings[user_id] = Dict()
+    push!(train_users, user_id)
   end
-  ratings[user_id][movie_id] = rating
-end
-@eval @everywhere ratings = $ratings
-
-run(`spanning_tree`)
-
-@everywhere function train(node)
-  user_id_pool = map(x -> string(convert(Int, x)), filter(x -> x % 4 == node, user_ids))
-  #TODO: Up passes to 80
-  open(`vw --total 4 --node $node --unique_id 0 --span_server localhost --holdout_off --passes 10 -q ui --rank 20 --l2 0.01 --learning_rate 0.015 --decay_learning_rate 0.97 --power_t 0 -f movielens$node.reg --cache_file movielens$node.cache`, "w", STDOUT) do io
-    for user_id in user_id_pool
-      for (movie_id, rating) in ratings[user_id]
-        println(io, "$rating |u $user_id |i $movie_id")
-      end
-    end
-  end
+  train_ratings[user_id][movie_id] = rating
 end
 
-@everywhere function predict(node)
-  port = 4040 + node
-  rec_file = open("jl_recs_$node.txt", "w")
-  run(`vw -i movielens0.reg --daemon --holdout_off --port $port --num_children 2`)
-  user_id_pool = map(x -> string(convert(Int, x)), filter(x -> x % 4 == node, user_ids))
-  for user_id in user_id_pool
-    vw_items = ""
-    for movie_id in movie_ids
-      if !haskey(ratings[user_id], movie_id)
-        vw_items *= "|u $user_id |i $movie_id\n"
-      end
+test_users = []
+test_ratings = Dict()
+while !eof(test_ratings_file)
+  line = readline(test_ratings_file)
+  user_id, movie_id, rating, timestamp = split(line, "::")
+  if !haskey(test_ratings, user_id)
+    test_ratings[user_id] = Dict()
+    push!(test_users, user_id)
+  end
+  test_ratings[user_id][movie_id] = rating
+end
+
+open(`vw --passes 10 -b 21 -q ui --rank 10 --l2 0.01 --learning_rate 0.015 --decay_learning_rate 0.97 --power_t 0 -f als/data/movielens.reg --cache_file als/data/movielens.cache`, "w", STDOUT) do io
+  for user_id in train_users
+    for (movie_id, rating) in train_ratings[user_id]
+      println(io, "$rating |u $user_id |i $movie_id")
     end
-    vw_items *= "eof"
-    println("Connecting to port $port")
-    vw_daemon = connect(port)
-    println(vw_daemon, vw_items)
-    preds = []
-    line = readline(vw_daemon)
-    while !contains(line, "eof")
-      push!(preds, parse(Float64, line))
-      line = readline(vw_daemon)
-    end
-    close(vw_daemon)
-    pos = 1
-    user_recs = []
-    for movie_id in movie_ids
-      if !haskey(ratings[user_id], movie_id)
-        push!(user_recs, [preds[pos], movie_id])
-        pos += 1
-      end
-    end
-    sort!(user_recs, rev = true, by = x -> x[1])
-    write(rec_file, string(Dict("user"=>user_id, "products"=>map(x -> x[2], user_recs[1:10]))))
   end
 end
 
-t0 = @spawn train(0)
-t1 = @spawn train(1)
-t2 = @spawn train(2)
-t3 = @spawn train(3)
-wait(t0)
-wait(t1)
-wait(t2)
-wait(t3)
-p0 = @spawn predict(0)
-p1 = @spawn predict(1)
-p2 = @spawn predict(2)
-p3 = @spawn predict(3)
-wait(p0)
-wait(p1)
-wait(p2)
-wait(p3)
-run(`cat jl_recs*` |> "all_jl_recs.dat")
-run(`killall spanning_tree`)
-run(`killall vw`)
+actuals = []
+open(`vw -i als/data/movielens.reg -t -p als/data/movielens_preds.txt`, "w", STDOUT) do io
+  for user_id in test_users
+    for (movie_id, rating) in test_ratings[user_id]
+      push!(actuals, rating)
+      println(io, "|u $user_id |i $movie_id")
+    end
+  end
+end
+
+preds = split(readstring(open("als/data/movielens_preds.txt", "r")), "\n")
+pos = 1
+rmses = []
+for pred in preds
+  if pred != ""
+    pred = parse(Float64, pred)
+    actual = parse(Float64, actuals[pos])
+    push!(rmses, (actual - pred) ^ 2)
+    pos += 1
+  end
+end
+rmse = sqrt(sum(rmses) / length(rmses))
+rm("als/data/movies_t.dat")
+rm("als/data/ratings_s.dat")
+rm("als/data/ratings_test.dat")
+rm("als/data/ratings_test_t.dat")
+rm("als/data/ratings_train.dat")
+rm("als/data/ratings_train_t.dat")
+rm("als/data/users_t_test.dat")
+rm("als/data/users_t_train.dat")
+rm("als/data/movielens.cache")
+rm("als/data/movielens.reg")
+rm("als/data/movielens_preds.txt")
+testfile = open("test_results.txt", "a")
+write(testfile, "\nALS in JuliaVW\n")
+current_time = now()
+write(testfile, "$current_time\n")
+write(testfile, "RMSE: $rmse\n")
+println("RMSE: $rmse")
+time = now() - then
+write(testfile, "Time: $time\n")
+println("Time: $time")
+speed = Float64(time) / num_lines * 1000
+write(testfile, "Speed: $speed mcs/row\n")
+println("Speed: $speed mcs/row")

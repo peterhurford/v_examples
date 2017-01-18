@@ -27,10 +27,10 @@ def write_to(reader, outfile):
       vw_line += "embarked_" + str(line[11]) + " "
       outfile.write(vw_line[:-1] + "\n")
 
-with open("titanic00", "r") as infile, open("titanic00_s", "wb") as outfile:
+with open("titanic/vw/titanic00", "r") as infile, open("titanic/vw/titanic00_s", "wb") as outfile:
   reader = csv.reader(infile)
   write_to(reader, outfile)
 
-with open("titanic01", "r") as infile, open("titanic01_s", "wb") as outfile:
+with open("titanic/vw/titanic01", "r") as infile, open("titanic/vw/titanic01_s", "wb") as outfile:
   reader = csv.reader(infile)
   write_to(reader, outfile)

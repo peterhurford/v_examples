@@ -2,7 +2,7 @@
 
 ## Import
 timer_start <- Sys.time()
-titanic <- readr::read_csv("../data/titanic.csv")
+titanic <- suppressMessages(readr::read_csv("titanic/data/titanic.csv"))
 
 ## Impute NAs with Median
 sapply(titanic, function(col) sum(surveytools2::is.na_like(col)))
@@ -99,9 +99,17 @@ model <- xgboost::xgboost(data = titanic_train,
 
 ## Get Test AUC
 preds <- xgboost::predict(model, titanic_test)
-message("AUC: ", pROC::auc(preds, dep_var_test))
+auc <- paste("AUC:", pROC::auc(preds, dep_var_test))
+cat(auc)
 timer_end <- Sys.time()
-message("Time: ", timer_end - timer_start, "s")
+time <- paste("Time:", timer_end - timer_start, "sec")
+num_lines <- length(readLines("titanic/data/titanic.csv"))
+speed <- paste("Speed:", (timer_end - timer_start) * 1000000 / num_lines, "mcs/row")
+cat(time)
+test_file <- file("test_results.txt", "a")
+write(c("", "TITANIC IN R XGB", as.character(timer_end), auc, time, speed), test_file, append = TRUE)
+close(test_file)
+
 # AUC: 0.5
 # Time: 1.3565149307251s
-# TODO: WTF?
+# TODO: AUC WTF?
