@@ -12,30 +12,23 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--cores')
 cores = int(parser.parse_args().cores)
 
-model = logistic_regression(name='Criteo',
-                            passes=40,
-                            l1=0.000001,
-                            l2=0.000001,
-                            debug=True,
-                            cores=cores)
+model = logistic_regression(name='Criteo', debug=True, cores=cores)
 
 def vw_process_line(item, predict=False):
     # Split tab separated file
-    item = item.replace('\n', '')
-    item = item.split('\t')
+    items = item.replace('\n', '').split('\t')
     if not predict:
-        label = item.pop(0)
-    interval_items = filter(lambda x: x.isdigit(), item)
-    # Identify empty interval items
-    interval_items = map(lambda x: None if x == '' else int(x), interval_items)
-    # Set name and values for interval items
-    interval_items = dict(zip(map(lambda x: 'i' + x, map(str, range(len(interval_items)))), interval_items))
-    # Handle empty interval items
-    interval_items = dict([(k, v) for (k, v) in interval_items.iteritems() if v])
-
-    categorical_items = filter(lambda x: not x.isdigit(), item)
-    # Handle empty categorical values
-    categorical_items = filter(lambda x: x != '', categorical_items)
+        label = items.pop(0)
+    interval_items = {}
+    categorical_items = {}
+    pos = 0
+    for item in items:
+        if item != '':
+            if pos < 13:
+                interval_items['i' + str(pos)] = int(item)
+            else:
+                categorical_items['c' + str(pos)] = item
+        pos += 1
     items = {
         'i': interval_items,
         'c': categorical_items
