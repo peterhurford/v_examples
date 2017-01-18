@@ -55,6 +55,6 @@ submission_file = open('criteo/data/kaggle_criteo_submission.txt', 'w')
 submission_file.write('Id,Predicted\n')
 for line in submission:
     submission_file.write(str(line[0]) + ',' + str(line[1]) + '\n')
-os.system('zip criteo/data/kaggle_criteo_submission.zip criteo/data/kaggle_criteo_submission.txt')
+submission_file.flush()
 writing_done = datetime.now()
 print('Elapsted file write time: ' + str(writing_done - end))
