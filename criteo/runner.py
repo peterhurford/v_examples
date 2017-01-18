@@ -13,7 +13,13 @@ parser.add_argument('--cores')
 cores = int(parser.parse_args().cores)
 
 model = logistic_regression(name='Criteo',
-                            passes=10,
+                            passes=30,
+                            debug=True,
+                            debug_rate=200000,
+                            bits=22,
+                            bfgs=True,
+                            termination=0.00001,
+                            l2=14,
                             cores=cores)
 
 def process_line(item, predict=False):
