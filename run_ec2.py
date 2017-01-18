@@ -70,13 +70,6 @@ print(ssh_client.run('sudo mkfs.xfs -q /dev/xvdx'))
 print(ssh_client.run('sudo mount -o "defaults,noatime,nodiratime" /dev/xvdx /vol'))
 print(ssh_client.run('sudo chmod 777 /vol'))
 
-print("Uploading ml-20m...")
-scp(key_path, instance.dns_name, source='~/Downloads/ml-20m.zip', target='ml-20m.zip')
-print(ssh_client.run('unzip ml-20m.zip'))
-
-print("Running...")
-scp(key_path, instance.dns_name, source='runner.py', target='ml-20m/runner.py')
-# print(ssh_client.run('cd ml-20m; python runner.py --cores 64 --num_ratings 2000000'))
 import pdb
 pdb.set_trace()
 conn.terminate_instances(instance.id)
