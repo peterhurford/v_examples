@@ -14,9 +14,7 @@ cores = int(parser.parse_args().cores)
 
 model = logistic_regression(name='Criteo',
                             passes=30,
-                            debug=True,
-                            debug_rate=200000,
-                            bits=22,
+                            bits=23,
                             bfgs=True,
                             termination=0.00001,
                             l2=14,
