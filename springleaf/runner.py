@@ -1,4 +1,4 @@
-from vowpal_platypus import run, logistic_regression, safe_remove
+from vowpal_platypus import run, logistic_regression
 import argparse
 import os
 from datetime import datetime
