@@ -26,7 +26,7 @@ def process_line(item, predict=False):
             if pos < 13:
                 interval_items['i' + str(pos)] = int(item)
             else:
-                categorical_items.append('c' + str(pos) + str(item))
+                categorical_items.append('c' + str(pos) + '_' + str(item))
     items = {
         'i': interval_items,
         'c': categorical_items
