@@ -3,12 +3,10 @@
 ## Libraries
 from datetime import datetime
 start = datetime.now()
-from vowpal_platypus import logistic_regression, run
-from sklearn import metrics
-from math import ceil, floor
-import re
-import os
-import numpy
+from vowpal_platypus import run
+from vowpal_platypus.models import logistic_regression
+from vowpal_platypus.evaluation import auc
+from vowpal_platypus.utils import clean
 import argparse
 
 # Setup
@@ -23,9 +21,6 @@ if hypersearch:
                                    l1=[0.00000001, 0.001], l2=[0.00000001, 0.01])
 else:
     vw_model = logistic_regression(name='Titanic', passes=3, quadratic='ff', nn=5)
-
-def clean(s):
-  return " ".join(re.findall(r'\w+', s,flags = re.UNICODE | re.LOCALE)).lower()
 
 def process_line(item):
     item = item.split(',')
@@ -48,11 +43,6 @@ def process_line(item):
         'label': 1 if item[1] == '1' else -1,
         'f': features
     }
-
-def auc(results):
-    preds = map(lambda x: -1 if x < 0.0 else 1, map(lambda x: x[0], results))
-    actuals = map(lambda x: x[1], results)
-    return metrics.roc_auc_score(numpy.array(preds), numpy.array(actuals))
 
 evaluate_function = auc if hypersearch else None
 all_results = run(vw_model,

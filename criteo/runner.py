@@ -1,4 +1,5 @@
-from vowpal_platypus import run, logistic_regression
+from vowpal_platypus import run
+from vowpal_platypus.models import logistic_regression
 import argparse
 import os
 from datetime import datetime

@@ -1,8 +1,6 @@
-from vowpal_platypus import logistic_regression, run
-import re
-
-def clean(s):
-  return " ".join(re.findall(r'\w+', s,flags = re.UNICODE | re.LOCALE)).lower()
+from vowpal_platypus import run
+from vowpal_platypus.models import logistic_regression
+from vowpal_platypus.utils import clean
 
 def process_line(item, predict=False):
     item = item.split(',')
@@ -42,5 +40,5 @@ submission = zip(ids, results)
 submission_file = open('titanic/data/kaggle/submission.csv', 'w')
 submission_file.write('PassengerId,Survived\n')
 for s in submission:
-    submission_file.write(str(s[0]) + ',' + str(0 if s[1] <= 0 else 1) + '\n')
+    submission_file.write(str(s[0]) + ',' + str(0 if s[1] <= 0.5 else 1) + '\n')
 submission_file.close()

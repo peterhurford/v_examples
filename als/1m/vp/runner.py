@@ -1,4 +1,6 @@
-from vowpal_platypus import run, als, safe_remove
+from vowpal_platypus import run
+from vowpal_platypus.models import als
+from vowpal_platypus.utils import safe_remove
 import argparse
 import os
 from datetime import datetime

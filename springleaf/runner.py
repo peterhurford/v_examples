@@ -1,4 +1,6 @@
-from vowpal_platypus import run, logistic_regression
+from vowpal_platypus import run
+from vowpal_platypus.models import logistic_regression
+from vowpal_platypus.evaluate_function import auc
 import argparse
 import os
 from datetime import datetime
@@ -33,11 +35,6 @@ def compile_item(item, predict=False):
     if not predict:
         features['label'] = -1 if int(label) == 0 else 1
     return features
-
-def auc(results):
-    preds = map(lambda x: -1 if x < 0.0 else 1, map(lambda x: x[0], results))
-    actuals = map(lambda x: x[1], results)
-    return metrics.roc_auc_score(numpy.array(preds), numpy.array(actuals))
 
 model = logistic_regression(name='Springleaf', passes=10, cores=cores, debug=True)
 if playground:  # For model tuning and such
