@@ -31,9 +31,9 @@ def rmse(results):
     return (sum(map(lambda x: (float(x[1]) - float(x[0])) ** 2, results)) / float(len(results))) ** 0.5
 
 if num_ratings < 1000000:
-    os.system('head -n ' + str(num_ratings) + ' als/data/ratings.dat > als/data/ratings_.dat')
+    os.system('head -n ' + str(num_ratings) + ' als/1m/data/ratings.dat > als/1m/data/ratings_.dat')
 else:
-    os.system('cp als/data/ratings.dat als/data/ratings_.dat')
+    os.system('cp als/1m/data/ratings.dat als/1m/data/ratings_.dat')
 
 if hypersearch:
     model = als(name='ALS', passes=[5, 10], cores=cores,
@@ -51,11 +51,11 @@ else:
     evaluate_function = None
 
 results = run(model,
-              'als/data/ratings_.dat',
+              'als/1m/data/ratings_.dat',
               line_function=compile_rating,
               evaluate_function=evaluate_function,
               header=False)
-safe_remove('als/data/ratings_.dat')
+safe_remove('als/1m/data/ratings_.dat')
 
 rmse = 'RMSE: ' + str(rmse(results))
 end = datetime.now()
