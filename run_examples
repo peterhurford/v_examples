@@ -27,10 +27,10 @@ echo "Speed: $speed mcs/row" >> test_results.txt
 rm lol
 
 echo "MovieLens VP!"
-python als/vp/runner.py --cores 4 > /dev/null
+python als/1m/vp/runner.py --cores 4 > /dev/null
 
 echo "MovieLens VP (Hypersearch)!"
-python als/vp/runner.py --cores 4 --num_ratings 100000 --hypersearch > lol
+python als/1m/vp/runner.py --cores 4 --num_ratings 100000 --hypersearch > lol
 grep "Best value" lol >> test_results.txt
 rm lol
 
@@ -38,7 +38,7 @@ echo "Movielens (Bash) VW!"
 echo "" >> test_results.txt
 echo "MOVIELENS ALS IN BASH VW" >> test_results.txt
 date >> test_results.txt
-(time als/bash/multicore_1m.sh --cores 4) >> lol 2>> lol
+(time als/1m/bash/multicore_1m.sh --cores 4) >> lol 2>> lol
 tail lol | grep "RMSE" >> test_results.txt
 vw_time=$(tail lol | grep "real" | awk '{printf $2}' | sed 's/0m//' | sed 's/s//')
 echo "Time: $vw_time sec" >> test_results.txt
@@ -47,7 +47,7 @@ echo "Speed: $speed mcs/row" >> test_results.txt
 rm lol
 
 echo "Movielens JuliaVW!"
-julia als/julia/runner.jl
+julia als/1m/julia/runner.jl
 
 echo "MovieLens PySpark!"
-spark-submit --master local[4] --driver-memory 8G als/pyspark/runner.py --partitions 16 > /dev/null
+spark-submit --master local[4] --driver-memory 8G als/1m/pyspark/runner.py --partitions 16 > /dev/null
