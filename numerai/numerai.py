@@ -1,4 +1,6 @@
-from vowpal_platypus import run, logistic_regression
+from vowpal_platypus import run
+from vowpal_platypus.models import logistic_regression
+from vowpal_platypus.evaluate_function import log_loss
 import argparse
 from math import log
 
@@ -20,11 +22,6 @@ def compile_predict(item):
     feature_names = ["feature" + str(n) for n in range(1, 22)]
     features = map(lambda s: s.replace('\n', ''), item[1:])
     return {'f': map(lambda x, y: str(x) + ':' + str(y), feature_names, features)}
-
-def log_loss(results):
-    predicted = [min([max([x, 1e-15]), 1-1e-15]) for x in map(lambda x: float(x[0]), results)]
-    target = [min([max([x, 1e-15]), 1-1e-15]) for x in map(lambda x: float(x[1]), results)]
-    return -(1.0 / len(target)) * sum([target[i] * log(predicted[i]) + (1.0 - target[i]) * log(1.0 - predicted[i]) for i in xrange(len(target))])
 
 model = logistic_regression(name='Numerai', passes=500, cores=cores,
             quadratic='ff', nn=5, l1 = 0.0001, l2 = 0.00001)
