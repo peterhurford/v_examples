@@ -1,7 +1,7 @@
-from vowpal_platypus import run
-from vowpal_platypus.models import logistic_regression
-from vowpal_platypus.evaluation import auc
-from vowpal_platypus.utils import clean
+from vowpal_platypus import run                        # The run function is the main function for running VP models.
+from vowpal_platypus.models import logistic_regression # vowpal_platypus.models is where all the models are imported from.
+from vowpal_platypus.evaluation import auc             # vowpal_platypus.evaluation can import a lot of evaluation functions, like AUC.
+from vowpal_platypus.utils import clean                # vowpal_platypus.utils has some useful utility functions.
 
 # VW trains on a file line by line. We need to define a function to turn each CSV line
 # into an output that VW can understand.
