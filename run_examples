@@ -51,3 +51,9 @@ julia als/1m/julia/runner.jl
 
 echo "MovieLens PySpark!"
 spark-submit --master local[4] --driver-memory 8G als/1m/pyspark/runner.py --partitions 16 > /dev/null
+
+# TODO: Figure out why this cleanup is necessary
+echo "Cleaning..."
+rm als/1m/data/ratings_.dat0*_t*
+rm titanic/data/titanic.csv_test
+rm titanic/data/titanic.csv_train
