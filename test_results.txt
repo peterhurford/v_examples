@@ -1,70 +1,72 @@
 
 TITANIC IN R XGB
-2017-01-20 15:00:16
+2017-02-09 11:09:08
 AUC: 0.5
-Time: 1.72058606147766 sec
-Speed: 1928.90814067002 mcs/row
+Time: 1.40751886367798 sec
+Speed: 1577.93594582733 mcs/row
 
 TITANIC IN PYTHON XGB
-2017-01-20 15:00:19.671115
-AUC: 0.793828892006
-Time: 3.16598 sec
-Speed: 3549.30493274 mcs/row
+2017-02-09 11:09:09.315118
+AUC: 0.800038270188
+Time: 0.572476 sec
+Speed: 641.789237668 mcs/row
 
 TITANIC IN PYTHON VP
-2017-01-20 15:00:19.954520
-AUC: 0.996795727637
-Time: 0.241021 sec
-Speed: 270.202914798 mcs/row
+2017-02-09 11:09:09.637355
+AUC: 0.99484823169
+Time: 0.284299 sec
+Speed: 318.720852018 mcs/row
 
 TITANIC IN PYTHON VP (HYPERSEARCH)
-2017-01-20 15:00:23.996133
-AUC: 0.962266817411
-Time: 4.025631 sec
-Speed: 4513.03923767 mcs/row
+2017-02-09 11:09:14.428857
+AUC: 0.967791005291
+Time: 4.773403 sec
+Speed: 5351.34865471 mcs/row
 Best value for passes was 2!
 Best value for nn was 20!
-Best value for l2 was 0.01!
+Best value for l2 was 1e-08!
 Best value for l1 was 0.001!
 
 TITANIC IN BASH VW
-Fri Jan 20 15:00:24 CST 2017
-AUC: 0.792277146378
-Time: 0.518 sec
-Speed: 580.71748878923766816143 mcs/row
+Thu Feb  9 11:09:14 CST 2017
+AUC: 0.719581211092
+Time: 0.476 sec
+Speed: 533.63228699551569506726 mcs/row
 
 MOVIELENS IN VP
-2017-01-20 15:01:15.886154
-RMSE: 0.868242770643
-Time: 51.266153 sec
-Speed: 51.266153 mcs/row
+2017-02-09 11:10:07.697349
+RMSE: 0.8281743304
+Time: 52.69587 sec
+Speed: 52.69587 mcs/row
 
 MOVILELENS IN VP (HYPERSEARCH)
-2017-01-20 15:06:08.967026
-RMSE: 0.810086316754
-Time: 292.935517 sec
-Speed: 2929.35517 mcs/row
-Best value for rank was 5!
-Best value for passes was 5!
+2017-02-09 11:15:15.910506
+RMSE: 0.822141896568
+Time: 308.035024 sec
+Speed: 3080.35024 mcs/row
 Best value for rank was 6!
 Best value for passes was 5!
-Best value for rank was 6!
+Best value for rank was 7!
+Best value for passes was 6!
+Best value for rank was 7!
+Best value for passes was 5!
+Best value for rank was 10!
 Best value for passes was 5!
 
 MOVIELENS ALS IN BASH VW
-Fri Jan 20 15:06:09 CST 2017
-RMSE: 0.921391
-Time: 57.340 sec
-Speed: 57.34000000000000000000 mcs/row
+Thu Feb  9 11:15:15 CST 2017
+RMSE: 0.921017
+Time: 57.998 sec
+Speed: 57.99800000000000000000 mcs/row
 
 ALS in JuliaVW
-2017-01-20T15:09:30.709
-RMSE: 0.9598508963995628
-Time: 143824 milliseconds
-Speed: 1438.24 mcs/row
+2017-02-09T11:18:42.512
+RMSE: 0.949627316100228
+Time: 148281 milliseconds
+Speed: 1482.81 mcs/row
 
 MOVIELENS IN PYSPARK
-2017-01-20 15:09:54.320838
-RMSE: 0.86979007432
-Time: 21.933015 sec
-Speed: 21.933015 mcs per row
+2017-02-09 11:19:06.919632
+RMSE: 0.870355851442
+Time: 23.481657 sec
+Speed: 23.481657 mcs per row
