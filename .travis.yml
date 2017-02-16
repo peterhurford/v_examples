@@ -11,7 +11,7 @@ install:
   - "git clone https://github.com/JohnLangford/vowpal_wabbit.git && cd vowpal_wabbit"
   - "make && sudo make install && cd .."
   - "pip install retrying"
-  - "pip install git+https://github.com/peterhuford/vowpal_platypus.git@master"
+  - "pip install git+https://github.com/peterhurford/vowpal_platypus.git@master"
   - "pip install git+https://github.com/uqfoundation/dill.git@master"
   - "pip install git+https://github.com/uqfoundation/pathos.git@master"
 # command to run tests
