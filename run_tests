@@ -1,0 +1,6 @@
+#!/bin/bash
+
+python titanic/vp/titanic.py &&
+  python titanic/vp/titanic.py --hypersearch &&
+  python als/1m/vp/runner.py --cores 4 &&
+  python als/1m/vp/runner.py --cores 4 --num_ratings 100000 --hypersearch

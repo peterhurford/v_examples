@@ -1,4 +1,4 @@
-# Prototype of Implementing Vowpal Wabbit for Machine Learning Systems
+# Examples of Using Vowpal Platypus [![Travis](https://img.shields.io/travis/peterhuford/vp_examples.svg)]()
 
 This is a repository of example code for [Vowpal Platypus](https://github.com/peterhurford/vowpal_platypus), a lightweight Python wrapper for quick, accurate, out-of-core, multi-core machine learning in Python.
 
