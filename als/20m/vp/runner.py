@@ -1,15 +1,110 @@
-#!/usr/bin/env python
-
-# Example usage: python runner.py --train_cores 40 --predict_cores 20 --num_ratings 20000000
-
-from vowpal_porpoise import VW
-from datetime import datetime
-from multiprocessing import Pool
-import os
+from vowpal_platypus import run
+from vowpal_platypus.models import als
+from vowpal_platypus.evaluation import rmse
 import argparse
-import random
-import socket
-from retrying import retry
+import os
+from datetime import datetime
+
+start = datetime.now()
+print('...Starting at ' + str(start))
+
+print("Setting up...")
+start = datetime.now()
+parser = argparse.ArgumentParser()
+parser.add_argument('--cores')
+cores = int(parser.parse_args().cores)
+
+ratings_file = open('ratings_.csv', 'r')
+movie_file = open('movies.csv', 'r')
+user_file = open('users.csv', 'r')
+movie_ids = [movie.split(',')[0] for movie in list(movie_file.read().splitlines())]
+user_ids = [user.split(',')[0] for user in list(user_file.read().splitlines())]
+movie_ids.pop(0) # Throw out headers
+user_ids.pop(0)
+
+ratings = compile_ratings(ratings_file)
+
+movie_file.close()
+user_file.close()
+ratings_file.close()
+
+def compile_rating(item):
+    item = item.split('::')
+    rating = item[2]
+    user_id = item[0]
+    movie_id = item[1]
+    return {'label': rating, 'c': user_id, 'p': movie_id}
+
+model = als(name='ALS', passes=10, cores=cores,
+            quadratic='cp', rank=10,
+            l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
+
+
+def train_model(model):
+    core = model.params.get('node', 0)
+    filename = 'als/1m/data/ratings.dat' + (str(core) if core >= 10 else '0' + str(core))
+    num_lines = sum(1 for line in open(audience_filename, 'r'))
+    log.info('{}: Loading {} lines...'.format(audience_filename, num_lines))
+    i = 0
+    curr_done = 0
+    with open(filename, 'r') as filehandle:
+        with model.training():
+            while True:
+                item = filehandle.readline()
+                if not item:
+                    break
+                i += 1
+                done = int(i / float(num_lines) * 100)
+                if done - curr_done > 1:
+                    log.info('{}: training done {}%'.format(audience_filename, done))
+                    curr_done = done
+                vw_item = compile_rating(item)
+                model.push_instance(vw_item)
+
+model = daemon(model, port=20168)
+
+def rec_with_model(core):
+    user_id_pool = filter(lambda x: int(x) % train_cores == core, user_ids)
+    i = 0
+    curr_done = 0
+    with open(filename, 'r') as filehandle:
+        available_products = [p for p in products.items() if p[1].get('available') is True or p[1].get('available') is None]
+        while True:
+            item = filehandle.readline()
+            if not item:
+                break
+            i += 1
+            done = int(i / float(num_lines) * 100)
+            if done - curr_done > 1:
+                log.info('{}: recs done {}%'.format(audience_filename, done))
+                curr_done = done
+            customer_id, audiences = process_audience(item)
+            if any(map(lambda x: x in target_audiences, audiences)):
+                if actions.get(customer_id) is not None:
+                    vw_items = []
+                    for product_id, product in available_products:
+                        vw_items.append(vw_line_fn(audiences, customer_id, product_id, predict=True))
+                    preds = daemon_predict(model, vw_items)
+                    product_ids = [p[0] for p in available_products]
+                    recs[customer_id] = sorted(zip(preds, product_ids), reverse=True)[0][1]  # Sorts by prediction, takes highest predicted product, gets product ID.
+    log.info('{}: Returning data to driver...'.format(audience_filename))
+    return recs
+
+def evaluate_model(model):
+results = run(model,
+              'als/20m/data/ratings.dat',
+              line_function=compile_rating,
+              evaluate_function=rmse,
+              header=False)
+
+rmse = 'RMSE: ' + str(rmse(results))
+end = datetime.now()
+time = 'Time: ' + str((end - start).total_seconds()) + ' sec'
+speed = 'Speed: ' + str((end - start).total_seconds() * 1000000 / float(num_ratings)) + ' mcs/row'
+
+
+
+
 
 def train_on_core(core):
     vw = vw_instances[core]
@@ -42,12 +137,6 @@ def netcat(hostname, port, content):
     s.close()
     return data
     
-def vw_model(node, volume, parallel=True):
-    if parallel:
-        return VW(moniker='{}ALS'.format(volume), total=train_cores, node=node, unique_id=0, span_server='localhost', holdout_off=True, bits=21, passes=40, quadratic='ui', rank=25, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
-    else:
-        return VW(moniker='{}ALS'.format(volume), holdout_off=True, bits=21, passes=40, quadratic='ui', rank=25, l2=0.001, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
-
 def daemon(core):
     port = core + 4040
     train_model = vw_instances[core % train_cores].get_model_file()
@@ -103,34 +192,6 @@ def evaluate_on_core(core):
     return sum(map(lambda x: (float(x[0]) - float(x[1])) ** 2, all_preds)) / len(all_preds)
 
 
-print("Setting up...")
-start = datetime.now()
-parser = argparse.ArgumentParser()
-parser.add_argument('--volume')
-parser.add_argument('--op_sys')
-parser.add_argument('--train_cores')
-parser.add_argument('--predict_cores')
-parser.add_argument('--num_ratings')
-parser.add_argument('--evaluate')
-parser.add_argument('--evaluate_only', action='store_true', default=False)
-volume = parser.parse_args().volume
-op_sys = parser.parse_args().op_sys
-if volume is None:
-    volume = os.getcwd()
-volume = volume + '/'
-if op_sys is None:
-    op_sys = 'ubuntu'
-train_cores = int(parser.parse_args().train_cores)
-predict_cores = int(parser.parse_args().predict_cores)
-num_ratings = int(parser.parse_args().num_ratings)
-evaluate = parser.parse_args().evaluate
-evaluate_only = parser.parse_args().evaluate_only
-if evaluate_only and (evaluate is None or evaluate is False):
-    evaluate = "ib"
-
-print("Cleaning up...")
-targets = ['ALS*', 'ratings_*', '*recs*', 'users.csv']
-[os.system('rm ' + volume + target) for target in targets]
 
 print("Formating data...")
 os.system("head -n {} {}ratings.csv | tail -n +2 > {}ratings_.csv".format(num_ratings + 1, volume, volume)) # +1 to not trim header

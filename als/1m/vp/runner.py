@@ -1,6 +1,7 @@
 from vowpal_platypus import run
 from vowpal_platypus.models import als
 from vowpal_platypus.utils import safe_remove
+from vowpal_platypus.evaluation import rmse
 import argparse
 import os
 from datetime import datetime
@@ -28,9 +29,6 @@ def compile_rating(item):
     user_id = item[0]
     movie_id = item[1]
     return {'label': rating, 'c': user_id, 'p': movie_id}
-
-def rmse(results):
-    return (sum(map(lambda x: (float(x[1]) - float(x[0])) ** 2, results)) / float(len(results))) ** 0.5
 
 if num_ratings < 1000000:
     os.system('head -n ' + str(num_ratings) + ' als/1m/data/ratings.dat > als/1m/data/ratings_.dat')
