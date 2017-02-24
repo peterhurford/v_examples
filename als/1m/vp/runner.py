@@ -53,10 +53,12 @@ else:
 results = run(model,
               'als/1m/data/ratings_.dat',
               line_function=compile_rating,
-              evaluate_function=evaluate_function,
+              evaluate_function=rmse,
               header=False)
 safe_remove('als/1m/data/ratings_.dat')
 
+import pdb
+pdb.set_trace()
 rmse = 'RMSE: ' + str(rmse(results))
 end = datetime.now()
 time = 'Time: ' + str((end - start).total_seconds()) + ' sec'
