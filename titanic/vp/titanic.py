@@ -1,4 +1,5 @@
-## Import Titanic data from spreadsheet, impute NAs with median, create title feature, separate into train and test, fit an XGB to the data, get test AUC.
+## VP Example using Kaggle titanic data.
+## Run with `python titanic/vp/titanic.py`
 
 ## Libraries
 from datetime import datetime
@@ -20,7 +21,7 @@ if hypersearch:
                                    nn=[5, 10, 15, 20],
                                    l1=[0.00000001, 0.001], l2=[0.00000001, 0.01])
 else:
-    vw_model = logistic_regression(name='Titanic', passes=3, quadratic='ff', nn=5)
+    vw_model = logistic_regression(name='Titanic', passes=3, quadratic='ff', l1=0.001)
 
 def process_line(item):
     item = item.split(',')
