@@ -1,3 +1,6 @@
+## Python XGBoost example on Kaggle data.
+## Run with `python titanic/xgboost/titanic.py`
+
 ## Import Titanic data from spreadsheet, impute NAs with median, create title feature, separate into train and test, fit an XGB to the data, get test AUC.
 
 ## Libraries

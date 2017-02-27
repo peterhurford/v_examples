@@ -1,3 +1,6 @@
+# Kaggle Titanic with SKLearn LogisticRegression.
+# Run with `python titanic/sklearn_example/example.py`
+
 from datetime import datetime
 start = datetime.now()
 from sklearn.linear_model import LogisticRegression

@@ -1,13 +1,14 @@
 #!/bin/bash
 
 rm test_results.txt
-echo "Titanic R XGB!"
-Rscript titanic/R/titanic.R > /dev/null
-echo "Titanic Python XGB!"
-python titanic/python/titanic.py > /dev/null
+echo "Titanic XGB!"
+python titanic/xgboost/titanic.py > /dev/null
+echo "Titanic Sklearn!"
+python titanic/sklearn_example/example.py > /dev/null
+echo "Titanic Pyspark!"
+spark-submit --master local[4] --driver-memory 8G --packages com.databricks:spark-csv_2.11:1.5.0 titanic/spark/example.py --partitions 16 > /dev/null
 echo "Titanic VP!"
 python titanic/vp/titanic.py > /dev/null
-
 echo "Titanic VP (Hypersearch)!"
 python titanic/vp/titanic.py --hypersearch > lol
 grep "Best value" lol >> test_results.txt
@@ -57,3 +58,4 @@ echo "Cleaning..."
 rm als/1m/data/ratings_.dat0*_t*
 rm titanic/data/titanic.csv_test
 rm titanic/data/titanic.csv_train
+rm ALS*
