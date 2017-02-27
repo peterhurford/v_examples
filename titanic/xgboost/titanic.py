@@ -88,7 +88,7 @@ time = 'Time: ' + str((end - start).total_seconds()) + ' sec'
 num_lines = sum(1 for line in open('titanic/data/titanic.csv', 'r'))
 speed = 'Speed: ' + str((end - start).total_seconds() * 1000000 / float(num_lines)) + ' mcs/row'
 with open('test_results.txt', 'a') as test_file:
-    for line in ['\n', 'TITANIC IN PYTHON XGB\n', str(datetime.now()) + '\n', auc + '\n', time + '\n', speed + '\n']:
+    for line in ['\n', 'TITANIC IN XGB\n', str(datetime.now()) + '\n', auc + '\n', time + '\n', speed + '\n']:
         test_file.write(line)
 print(auc)
 print(time)
