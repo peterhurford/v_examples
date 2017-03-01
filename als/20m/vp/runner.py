@@ -84,7 +84,7 @@ def predict(model):
         for user_id in user_id_pool:
             i += 1
             done = int(i / float(num_lines) * 100)
-            if done - curr_done > 1:
+            if done - curr_done >= 1:
                 print 'Predict - Core {} @ {}: done {}%'.format(core, str(datetime.now()), done)
                 curr_done = done
             unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
