@@ -67,7 +67,7 @@ def train_model(model):
         for user_id in user_id_pool:
             i += 1
             done = int(i / float(num_lines) * 100)
-            if done - curr_done > 1:
+            if done - curr_done > 4:
                 print 'Train - Core {}: done {}%'.format(core, done)
                 curr_done = done
             for movie_id, rating in ratings[user_id].iteritems():
@@ -77,7 +77,7 @@ def rec_for_user(model):
     core = model.params.get('node', 0)
     user_id_pool = filter(lambda x: int(x) % (cores * machines) == (core * (machine_number + 1)), user_ids)
     num_lines = len(user_id_pool)
-    model = daemon(model)
+    model = daemon(model, port=9000)
     with open('recs' + str(core) + '.txt', 'w') as rfile:
         i = 0
         curr_done = 0
