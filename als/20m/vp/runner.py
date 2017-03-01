@@ -68,7 +68,7 @@ def train(model):
             i += 1
             done = int(i / float(num_lines) * 100)
             if done - curr_done > 4:
-                print 'Train - Core {} @ {}: done {}%'.format(core, str(datetime.now(), done)
+                print 'Train - Core {} @ {}: done {}%'.format(core, str(datetime.now()), done)
                 curr_done = done
             for movie_id, rating in ratings[user_id].iteritems():
                 model.push_instance({'label': float(rating), 'u': user_id, 'i': movie_id})
@@ -85,7 +85,7 @@ def predict(model):
             i += 1
             done = int(i / float(num_lines) * 100)
             if done - curr_done > 1:
-                print 'Predict - Core {} @ {}: done {}%'.format(core, str(datetime.now(), done)
+                print 'Predict - Core {} @ {}: done {}%'.format(core, str(datetime.now()), done)
                 curr_done = done
             unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
             vw_items = map(lambda m: {'u': user_id, 'i': m}, unseen_movie_ids)
