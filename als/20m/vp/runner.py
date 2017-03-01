@@ -99,6 +99,6 @@ def predict(model):
 
 run_parallel(model, train, spindown=False)
 daemon(model[0], port=20140, num_children=(cores * 2) - 2)
-run_parallel(model[0], predict)
+run_parallel(model, predict)
 end = datetime.now()
 print('Time: ' + str((end - start).total_seconds()) + ' sec')
