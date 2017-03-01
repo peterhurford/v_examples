@@ -57,7 +57,7 @@ model = als(name='ALS', passes=10,
             quadratic='ui', rank=10,
             l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
 
-def train_model(model):
+def rec_for_user(model):
     core = model.params.get('node', 0)
     user_id_pool = filter(lambda x: int(x) % (cores * machines) == (core * (machine_number + 1)), user_ids)
     num_lines = len(user_id_pool)
@@ -73,11 +73,7 @@ def train_model(model):
             for movie_id, rating in ratings[user_id].iteritems():
                 model.push_instance({'label': float(rating), 'u': user_id, 'i': movie_id})
 
-def rec_for_user(model):
-    core = model.params.get('node', 0)
-    user_id_pool = filter(lambda x: int(x) % (cores * machines) == (core * (machine_number + 1)), user_ids)
-    num_lines = len(user_id_pool)
-    model = daemon(model, port=9000)
+    model = daemon(model)
     with open('recs' + str(core) + '.txt', 'w') as rfile:
         i = 0
         curr_done = 0
@@ -96,7 +92,6 @@ def rec_for_user(model):
                             'products': map(lambda x: x[1], user_recs[:10])}) + '\n')
     return None
 
-run_parallel(model, train_model)
 run_parallel(model, rec_for_user)
 end = datetime.now()
 print('Time: ' + str((end - start).total_seconds()) + ' sec')
