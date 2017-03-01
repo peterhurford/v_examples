@@ -55,8 +55,7 @@ ratingsfile.close()
 model = als(name='ALS', passes=10,
             cores=cores, machines=machines, machine_number=machine_number, master_ip=master_ip,
             quadratic='ui', rank=10,
-            l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0,
-            debug = True)
+            l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
 
 def train(model):
     core = model.params.get('node', 0)
