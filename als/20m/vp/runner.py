@@ -13,7 +13,7 @@ parser.add_argument('--cores')
 cores = int(parser.parse_args().cores)
 
 print("Formating data...")
-os.system("awk -F\",\" '{print $1}' data/ratings.csv | uniq > ../data/users.csv")
+os.system("awk -F\",\" '{print $1}' ../data/ratings.csv | uniq > ../data/users.csv")
 
 ratingsfile = open('../data/ratings.csv', 'r')
 movie_file = open('../data/movies.csv', 'r')
