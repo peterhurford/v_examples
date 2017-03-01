@@ -59,7 +59,7 @@ def train_model(model):
             i += 1
             done = int(i / float(num_lines) * 100)
             if done - curr_done > 1:
-                print 'Core {}: done {}%'.format(core, done)
+                print 'Train - Core {}: done {}%'.format(core, done)
                 curr_done = done
             for movie_id, rating in ratings[user_id].iteritems():
                 model.push_instance({'label': rating, 'u': user_id, 'i': movie_id})
@@ -77,7 +77,7 @@ def rec_for_user(model):
             i += 1
             done = int(i / float(num_lines) * 100)
             if done - curr_done > 1:
-                print 'Core {}: done {}%'.format(core, done)
+                print 'Predict - Core {}: done {}%'.format(core, done)
                 curr_done = done
             unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
             vw_items = map(lambda m: {'u': user_id, 'i': m}, unseen_movie_ids)
