@@ -1,5 +1,7 @@
 from vowpal_platypus import run_parallel
 from vowpal_platypus.models import als
+from vowpal_platypus.daemon import daemon, daemon_predict
+
 import argparse
 import os
 from datetime import datetime
