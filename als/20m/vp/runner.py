@@ -71,7 +71,7 @@ def train_model(model):
                 print 'Train - Core {}: done {}%'.format(core, done)
                 curr_done = done
             for movie_id, rating in ratings[user_id].iteritems():
-                model.push_instance({'label': rating, 'u': user_id, 'i': movie_id})
+                model.push_instance({'label': float(rating), 'u': user_id, 'i': movie_id})
 
 def rec_for_user(model):
     core = model.params.get('node', 0)
