@@ -13,10 +13,9 @@ parser.add_argument('--cores')
 cores = int(parser.parse_args().cores)
 
 print("Formating data...")
-os.system("head -n {} ../data/ratings.csv | tail -n +2 > ../data/ratings_.csv".format(num_ratings))
-os.system("awk -F\",\" '{print $1}' data/ratings_.csv | uniq > ../data/users.csv")
+os.system("awk -F\",\" '{print $1}' data/ratings.csv | uniq > ../data/users.csv")
 
-ratings_file = open('../data/ratings_.csv', 'r')
+ratingsfile = open('../data/ratings.csv', 'r')
 movie_file = open('../data/movies.csv', 'r')
 user_file = open('../data/users.csv', 'r')
 movie_ids = [movie.split(',')[0] for movie in list(movie_file.read().splitlines())]
@@ -24,10 +23,10 @@ user_ids = [user.split(',')[0] for user in list(user_file.read().splitlines())]
 movie_ids.pop(0) # Throw out headers
 user_ids.pop(0)
 
-def compile_ratings(ratings_file):
+def compile_ratings(ratingsfile):
     ratings = {}
     while True:
-        item = ratings_file.readline()
+        item = ratingsfile.readline()
         if not item:
             break
         item = item.split(',')
@@ -39,11 +38,11 @@ def compile_ratings(ratings_file):
         ratings[user_id][movie_id] = rating
     return ratings
 
-ratings = compile_ratings(ratings_file)
+ratings = compile_ratings(ratingsfile)
 
 movie_file.close()
 user_file.close()
-ratings_file.close()
+ratingsfile.close()
 
 model = als(name='ALS', passes=10, cores=cores,
             quadratic='cp', rank=10,
