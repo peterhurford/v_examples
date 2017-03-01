@@ -80,7 +80,7 @@ def rec_for_user(model):
                 print 'Core {}: done {}%'.format(core, done)
                 curr_done = done
             unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
-            vw_items = map(lambda m: {'u': user_id, 'i': m}, unseen_movie_ids))
+            vw_items = map(lambda m: {'u': user_id, 'i': m}, unseen_movie_ids)
             preds = daemon_predict(model, vw_items)
             user_recs = [list(a) for a in zip(preds, unseen_movie_ids)]
             user_recs.sort(reverse=True)
