@@ -57,7 +57,7 @@ model = als(name='ALS', passes=10,
             quadratic='ui', rank=10,
             l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
 
-def rec_for_user(model):
+def train(model):
     core = model.params.get('node', 0)
     user_id_pool = filter(lambda x: int(x) % (cores * machines) == (core * (machine_number + 1)), user_ids)
     num_lines = len(user_id_pool)
@@ -72,8 +72,12 @@ def rec_for_user(model):
                 curr_done = done
             for movie_id, rating in ratings[user_id].iteritems():
                 model.push_instance({'label': float(rating), 'u': user_id, 'i': movie_id})
+    return None
 
-    model = daemon(model)
+def predict(model):
+    core = model.params.get('node', 0)
+    user_id_pool = filter(lambda x: int(x) % (cores * machines) == (core * (machine_number + 1)), user_ids)
+    num_lines = len(user_id_pool)
     with open('recs' + str(core) + '.txt', 'w') as rfile:
         i = 0
         curr_done = 0
@@ -85,13 +89,15 @@ def rec_for_user(model):
                 curr_done = done
             unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
             vw_items = map(lambda m: {'u': user_id, 'i': m}, unseen_movie_ids)
-            preds = daemon_predict(model, vw_items)
+            preds = daemon_predict(4040, vw_items)
             user_recs = [list(a) for a in zip(preds, unseen_movie_ids)]
             user_recs.sort(reverse=True)
             rfile.write(str({'user': user_id,
                             'products': map(lambda x: x[1], user_recs[:10])}) + '\n')
     return None
 
-run_parallel(model, rec_for_user)
+run_parallel(model, train)
+daemon(model[0], port=4040, num_children=cores, quiet=True)
+run_parallel(model, predict)
 end = datetime.now()
 print('Time: ' + str((end - start).total_seconds()) + ' sec')
