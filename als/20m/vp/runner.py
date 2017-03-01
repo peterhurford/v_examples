@@ -97,7 +97,7 @@ def predict(model):
     return None
 
 run_parallel(model, train)
-daemon(model[0], port=4040, num_children=cores)
+daemon(model[0], port=8040, num_children=cores)
 run_parallel(model, predict)
 end = datetime.now()
 print('Time: ' + str((end - start).total_seconds()) + ' sec')
