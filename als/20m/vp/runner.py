@@ -89,7 +89,7 @@ def rec_for_user(model):
                             'products': map(lambda x: x[1], user_recs[:10])}) + '\n')
     return None
 
-run_parallel(train_model, model)
-run_parallel(rec_for_user, model)
+run_parallel(model, train_model)
+run_parallel(model, rec_for_user)
 end = datetime.now()
 print('Time: ' + str((end - start).total_seconds()) + ' sec')
