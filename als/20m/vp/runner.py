@@ -96,7 +96,7 @@ def predict(model):
                             'products': map(lambda x: x[1], user_recs[:10])}) + '\n')
     return None
 
-run_parallel(model, train)
+run_parallel(model, train, spindown=False)
 daemon(model[0], port=20140, num_children=cores*2)
 run_parallel(model, predict)
 end = datetime.now()
