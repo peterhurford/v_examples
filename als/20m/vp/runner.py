@@ -65,7 +65,7 @@ def train_model(model):
                 model.push_instance({'label': rating, 'u': user_id, 'i': movie_id})
 
 def rec_for_user(model):
-    core = models.params['node']
+    core = model.params['node']
     user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
     num_lines = len(user_id_pool)
     port = core + 20168
