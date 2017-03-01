@@ -12,7 +12,13 @@ print('...Starting at ' + str(start))
 start = datetime.now()
 parser = argparse.ArgumentParser()
 parser.add_argument('--cores')
+parser.add_argument('--machines')
+parser.add_argument('--machine_number')
+parser.add_argument('--master_ip')
 cores = int(parser.parse_args().cores)
+machines = int(parser.parse_args().machines)
+machine_number = int(parser.parse_args().machine_number)
+master_ip = parser.parse_args().master_ip
 
 print("Formating data...")
 os.system("awk -F\",\" '{print $1}' ../data/ratings.csv | uniq > ../data/users.csv")
@@ -46,13 +52,14 @@ movie_file.close()
 user_file.close()
 ratingsfile.close()
 
-model = als(name='ALS', passes=10, cores=cores,
+model = als(name='ALS', passes=10,
+            cores=cores, machines=machines, machine_number=machine_number, master_ip=master_ip,
             quadratic='ui', rank=10,
             l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
 
 def train_model(model):
     core = model.params.get('node', 0)
-    user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
+    user_id_pool = filter(lambda x: int(x) % (cores * machines) == (core * (machine_number + 1)), user_ids)
     num_lines = len(user_id_pool)
     with model.training():
         i = 0
@@ -68,10 +75,9 @@ def train_model(model):
 
 def rec_for_user(model):
     core = model.params.get('node', 0)
-    user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
+    user_id_pool = filter(lambda x: int(x) % (cores * machines) == (core * (machine_number + 1)), user_ids)
     num_lines = len(user_id_pool)
-    port = core + 20168
-    model = daemon(model, port)
+    model = daemon(model)
     with open('recs' + str(core) + '.txt', 'w') as rfile:
         i = 0
         curr_done = 0
