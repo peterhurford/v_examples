@@ -45,7 +45,7 @@ user_file.close()
 ratingsfile.close()
 
 model = als(name='ALS', passes=10, cores=cores,
-            quadratic='cp', rank=10,
+            quadratic='ui', rank=10,
             l2=0.01, learning_rate=0.015, decay_learning_rate=0.97, power_t=0)
 
 def train_model(model):
@@ -62,8 +62,7 @@ def train_model(model):
                 print 'Core {}: done {}%'.format(core, done)
                 curr_done = done
             for movie_id, rating in ratings[user_id].iteritems():
-                vw_item = rating + ' |u ' + user_id + ' |i ' + movie_id
-                model.push_instance(vw_item)
+                model.push_instance({'label': rating, 'u': user_id, 'i': movie_id})
 
 def rec_for_user(model):
     core = models.params['node']
@@ -81,7 +80,7 @@ def rec_for_user(model):
                 print 'Core {}: done {}%'.format(core, done)
                 curr_done = done
             unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
-            vw_items = ''.join(map(lambda m: '|u ' + user_id + ' |i ' + m + '\n', unseen_movie_ids))
+            vw_items = map(lambda m: {'u': user_id, 'i': m}, unseen_movie_ids))
             preds = daemon_predict(model, vw_items)
             user_recs = [list(a) for a in zip(preds, unseen_movie_ids)]
             user_recs.sort(reverse=True)
