@@ -89,9 +89,7 @@ def predict(model):
                 curr_done = done
             unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
             vw_items = map(lambda m: {'u': user_id, 'i': m}, unseen_movie_ids)
-            import pdb
-            pdb.set_trace()
-            preds = daemon_predict(20140, vw_items, quiet=True)
+            preds = daemon_predict(20140, vw_items) #, quiet=True)
             user_recs = [list(a) for a in zip(preds, unseen_movie_ids)]
             user_recs.sort(reverse=True)
             rfile.write(str({'user': user_id,
@@ -99,7 +97,7 @@ def predict(model):
     return None
 
 run_parallel(model, train, spindown=False)
-daemon(model[0], port=20140, num_children=cores*2)
+daemon(model[0], port=20140, num_children=(cores * 2) - 2)
 run_parallel(model[0], predict)
 end = datetime.now()
 print('Time: ' + str((end - start).total_seconds()) + ' sec')
