@@ -50,7 +50,7 @@ model = als(name='ALS', passes=10, cores=cores,
 
 def train_model(model):
     core = model.params.get('node', 0)
-    user_id_pool = filter(lambda x: int(x) % predict_cores == core, user_ids)
+    user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
     num_lines = len(user_id_pool)
     with model.training():
         i = 0
@@ -67,7 +67,7 @@ def train_model(model):
 
 def rec_for_user(model):
     core = models.params['node']
-    user_id_pool = filter(lambda x: int(x) % predict_cores == core, user_ids)
+    user_id_pool = filter(lambda x: int(x) % cores == core, user_ids)
     num_lines = len(user_id_pool)
     port = core + 20168
     model = daemon(model, port)
