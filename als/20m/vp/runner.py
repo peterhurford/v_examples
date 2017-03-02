@@ -76,7 +76,7 @@ def train(model):
 
 def predict(model):
     core = model.params.get('node', 0)
-    user_id_pool = filter(lambda x: int(x) % (cores * machines) == (core * (machine_number + 1)), user_ids)
+    user_id_pool = filter(lambda x: int(x) % (cores * machines) == core, user_ids)
     num_lines = len(user_id_pool)
     with open('recs' + str(core) + '.txt', 'w') as rfile:
         i = 0
