@@ -74,6 +74,7 @@ def rec_for_model(model):
             for movie_id, rating in ratings[user_id].iteritems():
                 model.push_instance({'label': float(rating), 'u': user_id, 'i': movie_id})
     model = daemon(model)
+    print 'Waiting for available ports...'
     time.sleep(8)
     with open('recs' + str(core) + '.txt', 'w') as rfile:
         i = 0
@@ -86,7 +87,7 @@ def rec_for_model(model):
                 curr_done = done
             unseen_movie_ids = list(set(movie_ids) - set(ratings[user_id].values()))
             vw_items = map(lambda m: {'u': user_id, 'i': m}, unseen_movie_ids)
-            preds = daemon_predict(model, vw_items)
+            preds = daemon_predict(model, vw_items, quiet=True)
             user_recs = [list(a) for a in zip(preds, unseen_movie_ids)]
             user_recs.sort(reverse=True)
             rfile.write(str({'user': user_id,
