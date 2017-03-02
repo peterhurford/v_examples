@@ -4,6 +4,7 @@ from vowpal_platypus.daemon import daemon, daemon_predict
 
 import argparse
 import os
+import time
 from datetime import datetime
 
 start = datetime.now()
@@ -73,6 +74,7 @@ def rec_for_model(model):
             for movie_id, rating in ratings[user_id].iteritems():
                 model.push_instance({'label': float(rating), 'u': user_id, 'i': movie_id})
     model = daemon(model)
+    time.sleep(2)
     with open('recs' + str(core) + '.txt', 'w') as rfile:
         i = 0
         curr_done = 0
