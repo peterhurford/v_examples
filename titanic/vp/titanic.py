@@ -20,29 +20,34 @@ if hypersearch:
                                    nn=[5, 10, 15, 20],
                                    l1=[0.00000001, 0.001], l2=[0.00000001, 0.01])
 else:
-    vw_model = logistic_regression(name='Titanic', passes=3, quadratic='ff', nn=5)
+    vw_model = logistic_regression(name='Titanic', passes=3, quadratic='ff', data_file=True)
 
-def process_line(item):
+def process_line(item, predict=False):
     item = item.split(',')
-    features = [
-                 'passenger_class_' + clean(item[2]),
-                 'last_name_' + clean(item[3]),
-                 {'gender': 0 if item[5] == 'male' else 1},
-                 {'siblings_onboard': int(item[7])},
-                 {'family_members_onboard': int(item[8])},
-                 {'fare': float(item[10])},
-                 'embarked_' + clean(item[12])
-               ]
-    title = item[4].split(' ')
+    if not predict:
+        label = item.pop(1)
+    features = ['passenger_class_' + clean(item[1]),
+                 {'gender': 0 if item[4] == 'male' else 1},
+                 {'siblings_onboard': int(item[6])},
+                 {'family_members_onboard': int(item[7])},
+                 'embarked_' + clean(item[11])]
+    last_name = clean(item[2]).split(' ')
+    if len(last_name):
+        features.append('last_' + last_name[0])
+    title = clean(item[3]).split(' ')
     if len(title):
-        features.append('title_' + title[1])
-    age = item[6]
-    if age.isdigit():
-        features.append({'age': int(item[6])})
-    return {
-        'label': 1 if item[1] == '1' else -1,
-        'f': features
-    }
+        features.append('title_' + title[0])
+    try:
+        features.append({'age': float(item[5])})
+    except:
+        pass
+    fare = item[9]
+    if fare.isdigit():
+        features.append({'fare': int(fare)})
+    if predict:
+        return {'f': features}
+    else:
+        return {'label': 1 if label == '1' else -1, 'f': features}
 
 evaluate_function = auc if hypersearch else None
 all_results = run(vw_model,

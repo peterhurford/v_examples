@@ -50,5 +50,3 @@ for pred in full_results:
 submission_file.flush()
 submission_file.close()
 print("Submission file written!")
-import pdb
-pdb.set_trace()

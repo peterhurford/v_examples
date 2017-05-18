@@ -63,5 +63,3 @@ submission_file.close()
 print("Submission file written!")
 end = datetime.now()
 print('Time: ' + str((end - start).total_seconds()) + ' sec')
-import pdb
-pdb.set_trace()

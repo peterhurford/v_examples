@@ -7,17 +7,20 @@ def process_line(item, predict=False):
     if not predict:
         label = item.pop(1)
     features = ['passenger_class_' + clean(item[1]),
-                 'last_name_' + clean(item[2]),
                  {'gender': 0 if item[4] == 'male' else 1},
                  {'siblings_onboard': int(item[6])},
                  {'family_members_onboard': int(item[7])},
                  'embarked_' + clean(item[11])]
-    title = item[3].split(' ')
+    last_name = clean(item[2]).split(' ')
+    if len(last_name):
+        features.append('last_' + last_name[0])
+    title = clean(item[3]).split(' ')
     if len(title):
         features.append('title_' + title[0])
-    age = item[5]
-    if age.isdigit():
-        features.append({'age': int(age)})
+    try:
+        features.append({'age': float(item[5])})
+    except:
+        pass
     fare = item[9]
     if fare.isdigit():
         features.append({'fare': int(fare)})

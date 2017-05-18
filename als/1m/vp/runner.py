@@ -25,7 +25,7 @@ else:
 
 def compile_rating(item):
     item = item.split('::')
-    rating = item[2]
+    rating = int(item[2])
     user_id = item[0]
     movie_id = item[1]
     return {'label': rating, 'c': user_id, 'p': movie_id}
@@ -57,8 +57,6 @@ results = run(model,
               header=False)
 safe_remove('als/1m/data/ratings_.dat')
 
-import pdb
-pdb.set_trace()
 rmse = 'RMSE: ' + str(rmse(results))
 end = datetime.now()
 time = 'Time: ' + str((end - start).total_seconds()) + ' sec'
